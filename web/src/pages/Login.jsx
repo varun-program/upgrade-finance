@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import { Mail, Lock, ShieldCheck, ToggleLeft, ToggleRight, Sparkles } from 'lucide-react';
 
 export default function Login({ onAuthSuccess }) {
@@ -16,9 +16,9 @@ export default function Login({ onAuthSuccess }) {
     setLoading(true);
     setError('');
 
-    const url = isRegister ? '/api/auth/register' : '/api/auth/login';
+    const url = isRegister ? '/auth/register' : '/auth/login';
     try {
-      const res = await axios.post(`http://localhost:8080${url}`, { email, password });
+      const res = await api.post(url, { email, password });
       
       if (!isRegister) {
         localStorage.setItem('auth_token', res.data.token);
