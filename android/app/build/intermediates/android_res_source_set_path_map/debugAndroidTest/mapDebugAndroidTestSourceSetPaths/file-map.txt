@@ -1,0 +1,6 @@
+com.upgradefinance.test.app-androidTest-0 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/generated/res/resValues/androidTest/debug
+com.upgradefinance.test.app-updated_navigation_xml-1 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/generated/updated_navigation_xml/debugAndroidTest
+com.upgradefinance.test.app-mergeDebugAndroidTestResources-2 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
+com.upgradefinance.test.app-mergeDebugAndroidTestResources-3 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
+com.upgradefinance.test.app-debugAndroidTest-4 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources
+gradleHome-0 /Users/varun/.gradle

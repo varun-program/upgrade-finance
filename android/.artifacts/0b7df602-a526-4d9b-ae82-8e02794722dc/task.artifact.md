@@ -1,0 +1,3 @@
+- [x] Create `app/src/main/AndroidManifest.xml`
+- [x] Create basic resources (optional but recommended)
+- [x] Run build to verify fix

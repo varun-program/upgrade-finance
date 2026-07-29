@@ -1,0 +1,9 @@
+com.upgradefinance.app-pngs-0 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/generated/res/pngs/debug
+com.upgradefinance.app-resValues-1 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/generated/res/resValues/debug
+com.upgradefinance.app-updated_navigation_xml-2 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/generated/updated_navigation_xml/debug
+com.upgradefinance.app-packageDebugResources-3 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.upgradefinance.app-packageDebugResources-4 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.upgradefinance.app-debug-5 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/intermediates/merged_res/debug/mergeDebugResources
+com.upgradefinance.app-debug-6 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/debug/res
+com.upgradefinance.app-main-7 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/res
+gradleHome-0 /Users/varun/.gradle

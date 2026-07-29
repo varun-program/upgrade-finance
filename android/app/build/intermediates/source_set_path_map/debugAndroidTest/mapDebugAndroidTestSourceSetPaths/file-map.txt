@@ -1,0 +1,7 @@
+com.upgradefinance.test.app-androidTest-0 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/generated/res/resValues/androidTest/debug
+com.upgradefinance.test.app-updated_navigation_xml-1 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/generated/updated_navigation_xml/debugAndroidTest
+com.upgradefinance.test.app-mergeDebugAndroidTestResources-2 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
+com.upgradefinance.test.app-mergeDebugAndroidTestResources-3 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
+com.upgradefinance.test.app-debugAndroidTest-4 /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources
+com.upgradefinance.test.app-jetified-annotation-experimental-1.3.0-5 /Users/varun/.gradle/caches/8.13/transforms/7f0b9680aee2e07d2368d6ff98286327/transformed/jetified-annotation-experimental-1.3.0/res
+com.upgradefinance.test.app-jetified-core-1.5.0-6 /Users/varun/.gradle/caches/8.13/transforms/a5e15ec975cf7f7fd4bdb447fe4a08b3/transformed/jetified-core-1.5.0/res

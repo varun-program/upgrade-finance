@@ -1,0 +1,22 @@
+R_DEF: Internal format may change without notice
+local
+id btnConnect
+id btnDisconnect
+id btnGrantNotifications
+id btnGrantSms
+id btnSyncNow
+id cardLogin
+id cardStatus
+id etEmail
+id etPassword
+id etServerUrl
+id tvAppSubtitle
+id tvAppTitle
+id tvLastSync
+id tvNotificationStatus
+id tvServerStatus
+id tvSmsPermissionStatus
+id tvTxCount
+id tvUserEmail
+layout activity_main
+string app_name
