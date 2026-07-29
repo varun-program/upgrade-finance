@@ -49,7 +49,7 @@ public class SMSReceiver extends BroadcastReceiver {
         }
     }
 
-    private void parseAndSaveTransaction(Context context, String body, String sender) {
+    public void parseAndSaveTransaction(Context context, String body, String sender) {
         boolean isDebit = DEBIT_PATTERN.matcher(body).find();
         boolean isCredit = CREDIT_PATTERN.matcher(body).find();
         

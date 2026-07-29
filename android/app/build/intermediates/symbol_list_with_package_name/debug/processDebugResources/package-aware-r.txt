@@ -3171,6 +3171,7 @@ id btnConnect
 id btnDisconnect
 id btnGrantNotifications
 id btnGrantSms
+id btnSimulateSms
 id btnSyncNow
 id buttonPanel
 id cache_measures

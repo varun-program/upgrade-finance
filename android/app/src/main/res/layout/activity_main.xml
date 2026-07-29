@@ -318,6 +318,15 @@
                         android:text="Sync Now"
                         android:backgroundTint="#10B981"
                         android:textColor="#FFFFFF" />
+
+                    <Button
+                        android:id="@+id/btnSimulateSms"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="Simulate Test SMS"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="#4F46E5"
+                        android:textColor="#FFFFFF" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
         </LinearLayout>

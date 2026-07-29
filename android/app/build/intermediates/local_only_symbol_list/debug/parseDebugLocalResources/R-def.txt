@@ -4,6 +4,7 @@ id btnConnect
 id btnDisconnect
 id btnGrantNotifications
 id btnGrantSms
+id btnSimulateSms
 id btnSyncNow
 id cardLogin
 id cardStatus

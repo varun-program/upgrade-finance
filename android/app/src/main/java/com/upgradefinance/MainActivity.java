@@ -25,6 +25,7 @@ import androidx.work.WorkManager;
 
 import com.google.gson.Gson;
 import com.upgradefinance.db.AppDatabase;
+import com.upgradefinance.receiver.SMSReceiver;
 import com.upgradefinance.worker.SyncWorker;
 
 import java.io.InputStreamReader;
@@ -41,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "UpgradeFinancePrefs";
 
     private EditText etServerUrl, etEmail, etPassword;
-    private Button btnConnect, btnDisconnect, btnGrantSms, btnGrantNotifications, btnSyncNow;
+    private Button btnConnect, btnDisconnect, btnGrantSms, btnGrantNotifications, btnSyncNow, btnSimulateSms;
     private TextView tvSmsPermissionStatus, tvNotificationStatus, tvLastSync, tvTxCount, tvUserEmail, tvServerStatus;
     private View cardLogin, cardStatus;
 
@@ -62,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
         btnGrantSms = findViewById(R.id.btnGrantSms);
         btnGrantNotifications = findViewById(R.id.btnGrantNotifications);
         btnSyncNow = findViewById(R.id.btnSyncNow);
+        btnSimulateSms = findViewById(R.id.btnSimulateSms);
         tvSmsPermissionStatus = findViewById(R.id.tvSmsPermissionStatus);
         tvNotificationStatus = findViewById(R.id.tvNotificationStatus);
         tvLastSync = findViewById(R.id.tvLastSync);
@@ -108,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         btnGrantSms.setOnClickListener(v -> requestSmsPermission());
         btnGrantNotifications.setOnClickListener(v -> openNotificationAccessSettings());
         btnSyncNow.setOnClickListener(v -> triggerSyncNow());
+        btnSimulateSms.setOnClickListener(v -> handleSimulateSms());
     }
 
     private void handleConnect() {
@@ -280,5 +283,24 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "SMS Permission denied. Tracking will not work.", Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    private void handleSimulateSms() {
+        Toast.makeText(this, "Simulating incoming payment SMS...", Toast.LENGTH_SHORT).show();
+        executor.execute(() -> {
+            try {
+                // Simulate Kotak SMS body
+                String smsBody = "Sent Rs.14.00 from XXXXXX7215 to Swiggy. Ref ID: 678901234567";
+                new SMSReceiver().parseAndSaveTransaction(MainActivity.this, smsBody, "JM-KOTAKD-S");
+                
+                // Wait briefly and update stats
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    Toast.makeText(MainActivity.this, "Simulation completed!", Toast.LENGTH_SHORT).show();
+                    updateSyncStats();
+                }, 1000);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 }

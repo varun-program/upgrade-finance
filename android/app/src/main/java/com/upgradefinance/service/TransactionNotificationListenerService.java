@@ -27,10 +27,7 @@ public class TransactionNotificationListenerService extends NotificationListener
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         String pkg = sbn.getPackageName();
-        if (!GPAY_PKG.equals(pkg) && !PHONEPE_PKG.equals(pkg) && !PAYTM_PKG.equals(pkg)) {
-            return; // Not a payment app push notification
-        }
-
+        
         Notification notification = sbn.getNotification();
         if (notification == null || notification.extras == null) return;
 
@@ -38,13 +35,24 @@ public class TransactionNotificationListenerService extends NotificationListener
         CharSequence text = notification.extras.getCharSequence(Notification.EXTRA_TEXT);
 
         if (text == null) return;
+        
+        String body = text.toString();
+        String titleStr = title != null ? title.toString() : "";
 
-        Log.d(TAG, "Payment app notification intercepted. Pkg: " + pkg + " Text: " + text);
+        // Whitelist packages: payment apps OR SMS apps
+        boolean isPaymentApp = GPAY_PKG.equals(pkg) || PHONEPE_PKG.equals(pkg) || PAYTM_PKG.equals(pkg);
+        boolean isSmsApp = pkg.contains("messaging") || pkg.contains("mms") || pkg.contains("sms") || pkg.contains("telephony");
 
-        parseAndSaveNotification(text.toString(), pkg);
+        if (!isPaymentApp && !isSmsApp) {
+            return; // Ignore other apps (e.g. WhatsApp, emails)
+        }
+
+        Log.d(TAG, "Notification intercepted. Pkg: " + pkg + " Title: " + titleStr + " Text: " + body);
+
+        parseAndSaveNotification(body, titleStr, pkg);
     }
 
-    private void parseAndSaveNotification(String body, String pkg) {
+    private void parseAndSaveNotification(String body, String title, String pkg) {
         Matcher matcher = PAYMENT_PATTERN.matcher(body);
         if (!matcher.find()) return;
 
@@ -55,7 +63,13 @@ public class TransactionNotificationListenerService extends NotificationListener
             String merchant = "Unknown Merchant";
             if (body.contains("to ")) {
                 int start = body.indexOf("to ") + 3;
-                merchant = body.substring(start).trim();
+                String rawMerchant = body.substring(start).trim();
+                int onIndex = rawMerchant.indexOf("on ");
+                if (onIndex > 0) {
+                    merchant = rawMerchant.substring(0, onIndex).trim();
+                } else {
+                    merchant = rawMerchant;
+                }
             } else if (body.contains("at ")) {
                 int start = body.indexOf("at ") + 3;
                 merchant = body.substring(start).trim();
@@ -72,15 +86,40 @@ public class TransactionNotificationListenerService extends NotificationListener
             final double finalAmount = amount;
             final boolean finalIsDebit = isDebit;
             
+            // Extract bank name
             String bankName = "UPI";
             if (pkg.contains("paisa")) bankName = "Google Pay";
             else if (pkg.contains("phonepe")) bankName = "PhonePe";
             else if (pkg.contains("paytm")) bankName = "Paytm";
+            else if (title != null && !title.isEmpty()) {
+                if (title.contains("KOTAK")) bankName = "Kotak Bank";
+                else if (title.contains("SBI")) bankName = "SBI";
+                else if (title.contains("HDFC")) bankName = "HDFC";
+                else if (title.contains("ICICI")) bankName = "ICICI";
+                else if (title.contains("AXIS")) bankName = "Axis";
+                else bankName = title; // fallback to sender code
+            }
             final String finalBank = bankName;
+
+            // Extract reference number
+            String refNum = null;
+            Pattern refPattern = Pattern.compile("(?i)(?:ref|upi|txn|id)\\.?\\s*(\\d{12}|\\d{6,})");
+            Matcher refMatcher = refPattern.matcher(body);
+            if (refMatcher.find()) {
+                refNum = refMatcher.group(1);
+            }
+            final String finalRefNum = refNum != null ? refNum : "NOTIF_" + (System.currentTimeMillis() / 1000) + "_" + (int)(amount);
 
             Executors.newSingleThreadExecutor().execute(() -> {
                 AppDatabase db = AppDatabase.getDatabase(getApplicationContext());
                 TransactionDao dao = db.transactionDao();
+
+                // Duplicate check via RefNum
+                LocalTransaction existing = dao.getTransactionByRefNum(finalRefNum);
+                if (existing != null) {
+                    Log.d(TAG, "Duplicate transaction matching refNum: " + finalRefNum + ". Skipping.");
+                    return;
+                }
 
                 // Build a LocalTransaction item
                 LocalTransaction tx = new LocalTransaction();
@@ -93,8 +132,7 @@ public class TransactionNotificationListenerService extends NotificationListener
                 tx.bank = finalBank;
                 tx.isDeleted = false;
                 tx.updatedAt = System.currentTimeMillis();
-                // Reference number might arrive later in bank SMS. We create a placeholder.
-                tx.referenceNumber = "NOTIF_" + (System.currentTimeMillis() / 1000) + "_" + (int)(amount);
+                tx.referenceNumber = finalRefNum;
 
                 dao.insertOrReplace(tx);
                 Log.d(TAG, "Saved push transaction: ₹" + finalAmount + " for " + finalMerchant);

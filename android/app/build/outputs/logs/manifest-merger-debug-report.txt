@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:2:1-47:12
-INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:2:1-47:12
-INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:2:1-47:12
-INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:2:1-47:12
+ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:2:1-46:12
+INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:2:1-46:12
+INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:2:1-46:12
+INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:2:1-46:12
 MERGED from [com.google.android.material:material:1.11.0] /Users/varun/.gradle/caches/9.5.0/transforms/02c039a127a113fb368de660d1db81f9/transformed/material-1.11.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/varun/.gradle/caches/9.5.0/transforms/13d199ff5e316f89dcff26b95141861e/transformed/constraintlayout-2.1.4/AndroidManifest.xml:2:1-11:12
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/varun/.gradle/caches/9.5.0/transforms/c927db05f4df8320a3bda2935c00259a/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
@@ -86,8 +86,8 @@ ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/
 	android:name
 		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:9:19-60
 application
-ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:11:5-45:19
-INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:11:5-45:19
+ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:11:5-44:19
+INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:11:5-44:19
 MERGED from [com.google.android.material:material:1.11.0] /Users/varun/.gradle/caches/9.5.0/transforms/02c039a127a113fb368de660d1db81f9/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.11.0] /Users/varun/.gradle/caches/9.5.0/transforms/02c039a127a113fb368de660d1db81f9/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/varun/.gradle/caches/9.5.0/transforms/13d199ff5e316f89dcff26b95141861e/transformed/constraintlayout-2.1.4/AndroidManifest.xml:9:5-20
@@ -137,37 +137,35 @@ ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/
 	android:name
 		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:22:27-74
 receiver#com.upgradefinance.receiver.SMSReceiver
-ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:26:9-34:20
+ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:26:9-33:20
 	android:enabled
 		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:28:13-35
 	android:exported
 		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:29:13-36
-	android:permission
-		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:30:13-66
 	android:name
 		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:27:13-49
 intent-filter#action:name:android.provider.Telephony.SMS_RECEIVED
-ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:31:13-33:29
+ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:30:13-32:29
 	android:priority
-		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:31:28-50
+		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:30:28-50
 action#android.provider.Telephony.SMS_RECEIVED
-ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:32:17-82
+ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:31:17-82
 	android:name
-		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:32:25-79
+		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:31:25-79
 service#com.upgradefinance.service.TransactionNotificationListenerService
-ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:36:9-43:19
+ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:35:9-42:19
 	android:exported
-		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:38:13-36
+		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:37:13-36
 	android:permission
-		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:39:13-87
+		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:38:13-87
 	android:name
-		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:37:13-75
+		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:36:13-75
 intent-filter#action:name:android.service.notification.NotificationListenerService
-ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:40:13-42:29
+ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:39:13-41:29
 action#android.service.notification.NotificationListenerService
-ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:41:17-99
+ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:40:17-99
 	android:name
-		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:41:25-96
+		ADDED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml:40:25-96
 uses-sdk
 INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/varun/.gemini/antigravity/scratch/upgrade-finance/android/app/src/main/AndroidManifest.xml
