@@ -1,0 +1,187 @@
+openapi: 3.0.3
+info:
+  title: Upgrade Finance REST API
+  description: API specifications for synchronization, auth, and managing transactions, budgets, goals, and smart rules for Upgrade Finance.
+  version: 1.0.0
+paths:
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: User registered successfully
+        '400':
+          description: Invalid details or email already in use
+
+  /api/auth/login:
+    post:
+      summary: Login and obtain JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '401':
+          description: Unauthorized
+
+  /api/sync:
+    post:
+      summary: Sync client changes and download server changes (delta sync)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - lastSyncTimestamp
+                - clientChanges
+              properties:
+                lastSyncTimestamp:
+                  type: integer
+                  description: Epoch millisecond of last sync
+                clientChanges:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Transaction'
+      responses:
+        '200':
+          description: Sync complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  serverChanges:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  syncTimestamp:
+                    type: integer
+
+  /api/transactions:
+    get:
+      summary: Get transactions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of transactions
+    post:
+      summary: Create a transaction manually
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+      responses:
+        '201':
+          description: Transaction created
+
+  /api/ai/chat:
+    post:
+      summary: Chat with the AI Financial Assistant
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: number
+        timestamp:
+          type: integer
+        merchant:
+          type: string
+        upiId:
+          type: string
+        referenceNumber:
+          type: string
+        bank:
+          type: string
+        transactionType:
+          type: string
+          enum: [DEBIT, CREDIT]
+        category:
+          type: string
+        isDeleted:
+          type: boolean
+        updatedAt:
+          type: integer

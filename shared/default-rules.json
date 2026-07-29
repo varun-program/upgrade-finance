@@ -1,0 +1,113 @@
+{
+  "categories": {
+    "Swiggy": "Food",
+    "Zomato": "Food",
+    "Uber": "Travel",
+    "Rapido": "Travel",
+    "Ola": "Travel",
+    "Amazon": "Shopping",
+    "Flipkart": "Shopping",
+    "Myntra": "Shopping",
+    "Jiomart": "Shopping",
+    "Netflix": "Bills",
+    "Spotify": "Bills",
+    "Youtube": "Bills",
+    "Airtel": "Bills",
+    "Jio": "Bills",
+    "Vi": "Bills",
+    "Apollo": "Healthcare",
+    "Pharmeasy": "Healthcare",
+    "1mg": "Healthcare",
+    "Fuel": "Fuel",
+    "Shell": "Fuel",
+    "IndianOil": "Fuel",
+    "HPCL": "Fuel",
+    "BPCL": "Fuel",
+    "Starbucks": "Food",
+    "McDonald": "Food",
+    "Burger King": "Food",
+    "Dominos": "Food"
+  },
+  "sms_patterns": [
+    {
+      "bank": "SBI",
+      "regex": "(?i)Debited by Rs\\.?\\s*([\\d,]+\\.?\\d*)\\b.*\\bto\\s+([^\\n\\r]+?)\\b\\s*ref\\s*no\\s*(\\d+)",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "DEBIT"
+    },
+    {
+      "bank": "SBI",
+      "regex": "(?i)Credited by Rs\\.?\\s*([\\d,]+\\.?\\d*)\\b.*\\bfrom\\s+([^\\n\\r]+?)\\b\\s*ref\\s*no\\s*(\\d+)",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "CREDIT"
+    },
+    {
+      "bank": "HDFC",
+      "regex": "(?i)alert:?.*Rs\\.?\\s*([\\d,]+\\.?\\d*)\\b.*debited\\b.*to\\s+([^\\n\\r]+?)\\b.*ref\\.?\\s*(\\d+)",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "DEBIT"
+    },
+    {
+      "bank": "HDFC",
+      "regex": "(?i)alert:?.*Rs\\.?\\s*([\\d,]+\\.?\\d*)\\b.*credited\\b.*from\\s+([^\\n\\r]+?)\\b.*ref\\.?\\s*(\\d+)",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "CREDIT"
+    },
+    {
+      "bank": "ICICI",
+      "regex": "(?i)Acct\\s*\\*?\\*?\\d+\\s*debited\\s*with\\s*INR\\s*([\\d,]+\\.?\\d*)\\b.*\\bto\\s+([^\\n\\r]+?)\\b.*\\bRef\\b.*\\b(\\d+)",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "DEBIT"
+    },
+    {
+      "bank": "ICICI",
+      "regex": "(?i)Acct\\s*\\*?\\*?\\d+\\s*credited\\s*with\\s*INR\\s*([\\d,]+\\.?\\d*)\\b.*\\bfrom\\s+([^\\n\\r]+?)\\b.*\\bRef\\b.*\\b(\\d+)",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "CREDIT"
+    },
+    {
+      "bank": "AXIS",
+      "regex": "(?i)A\\/c\\s*\\*?\\*?\\d+\\s*debited\\s*for\\s*Rs\\.?\\s*([\\d,]+\\.?\\d*)\\b.*\\bto\\s+([^\\n\\r]+?)\\b.*\\bRef\\s*(\\d+)",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "DEBIT"
+    },
+    {
+      "bank": "AXIS",
+      "regex": "(?i)A\\/c\\s*\\*?\\*?\\d+\\s*credited\\s*for\\s*Rs\\.?\\s*([\\d,]+\\.?\\d*)\\b.*\\bfrom\\s+([^\\n\\r]+?)\\b.*\\bRef\\s*(\\d+)",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "CREDIT"
+    },
+    {
+      "bank": "GENERIC_UPI",
+      "regex": "(?i)sent\\s*Rs\\.?\\s*([\\d,]+\\.?\\d*)\\b.*\\bto\\s+([^\\n\\r]+?)\\b\\s*ref\\b.*\\b(\\d{12})",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "DEBIT"
+    },
+    {
+      "bank": "GENERIC_UPI",
+      "regex": "(?i)received\\s*Rs\\.?\\s*([\\d,]+\\.?\\d*)\\b.*\\bfrom\\s+([^\\n\\r]+?)\\b\\s*ref\\b.*\\b(\\d{12})",
+      "amount_group": 1,
+      "merchant_group": 2,
+      "ref_group": 3,
+      "type": "CREDIT"
+    }
+  ]
+}
