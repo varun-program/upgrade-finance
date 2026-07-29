@@ -57,7 +57,7 @@ public class SyncWorker extends Worker {
             payload.put("lastSyncTimestamp", lastSync);
             payload.put("transactions", changes);
 
-            URL url = new URL("http://10.0.2.2:8080/api/sync"); // 10.0.2.2 matches localhost from Android emulator
+            URL url = new URL("https://upgrade-finance.onrender.com/api/sync"); // Connects to production Render backend
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
