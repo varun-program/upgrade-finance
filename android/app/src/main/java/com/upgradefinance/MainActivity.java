@@ -25,9 +25,15 @@ import androidx.work.WorkManager;
 
 import com.google.gson.Gson;
 import com.upgradefinance.db.AppDatabase;
+import com.upgradefinance.db.TransactionDao;
+import com.upgradefinance.model.LocalTransaction;
 import com.upgradefinance.receiver.SMSReceiver;
 import com.upgradefinance.utils.AppLogger;
 import com.upgradefinance.worker.SyncWorker;
+
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -43,12 +49,13 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "UpgradeFinancePrefs";
 
     private EditText etServerUrl, etEmail, etPassword;
-    private Button btnConnect, btnDisconnect, btnGrantSms, btnGrantNotifications, btnSyncNow, btnSimulateSms;
+    private Button btnConnect, btnDisconnect, btnGrantSms, btnGrantNotifications, btnSyncNow, btnSimulateSms, btnScanInbox;
     private TextView tvSmsPermissionStatus, tvNotificationStatus, tvLastSync, tvTxCount, tvUserEmail, tvServerStatus, tvLogs;
     private View cardLogin, cardStatus;
 
     private SharedPreferences prefs;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private SMSReceiver dynamicSmsReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
         btnGrantNotifications = findViewById(R.id.btnGrantNotifications);
         btnSyncNow = findViewById(R.id.btnSyncNow);
         btnSimulateSms = findViewById(R.id.btnSimulateSms);
+        btnScanInbox = findViewById(R.id.btnScanInbox);
         tvSmsPermissionStatus = findViewById(R.id.tvSmsPermissionStatus);
         tvNotificationStatus = findViewById(R.id.tvNotificationStatus);
         tvLastSync = findViewById(R.id.tvLastSync);
@@ -84,6 +92,15 @@ public class MainActivity extends AppCompatActivity {
 
         AppLogger.setListener(() -> updateLogDisplay());
         updateLogDisplay();
+
+        // Register SMS receiver dynamically as a backup
+        dynamicSmsReceiver = new SMSReceiver();
+        android.content.IntentFilter filter = new android.content.IntentFilter("android.provider.Telephony.SMS_RECEIVED");
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(dynamicSmsReceiver, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(dynamicSmsReceiver, filter);
+        }
     }
 
     @Override
@@ -91,6 +108,18 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         updatePermissionsStatus();
         updateSyncStats();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (dynamicSmsReceiver != null) {
+            try {
+                unregisterReceiver(dynamicSmsReceiver);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
     }
 
     private void setupAuthUI() {
@@ -116,6 +145,7 @@ public class MainActivity extends AppCompatActivity {
         btnGrantNotifications.setOnClickListener(v -> openNotificationAccessSettings());
         btnSyncNow.setOnClickListener(v -> triggerSyncNow());
         btnSimulateSms.setOnClickListener(v -> handleSimulateSms());
+        btnScanInbox.setOnClickListener(v -> handleScanInbox());
     }
 
     private void handleConnect() {
@@ -320,5 +350,143 @@ public class MainActivity extends AppCompatActivity {
             builder.append(line).append("\n");
         }
         tvLogs.setText(builder.toString());
+    }
+
+    private void handleScanInbox() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Please grant SMS permission first!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        Toast.makeText(this, "Scanning SMS inbox...", Toast.LENGTH_SHORT).show();
+        AppLogger.log("SMS Scan: Started inbox scan...");
+        
+        executor.execute(() -> {
+            int totalFound = 0;
+            int newSaved = 0;
+            android.database.Cursor cursor = null;
+            try {
+                android.net.Uri uri = android.net.Uri.parse("content://sms/inbox");
+                // Get messages from the last 7 days to keep it fast
+                long cutoffTime = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L);
+                String selection = "date > ?";
+                String[] selectionArgs = new String[]{String.valueOf(cutoffTime)};
+                
+                cursor = getContentResolver().query(uri, new String[]{"address", "body", "date"}, selection, selectionArgs, "date DESC");
+                
+                if (cursor != null && cursor.moveToFirst()) {
+                    AppDatabase db = AppDatabase.getDatabase(MainActivity.this);
+                    TransactionDao dao = db.transactionDao();
+                    
+                    int addressIndex = cursor.getColumnIndexOrThrow("address");
+                    int bodyIndex = cursor.getColumnIndexOrThrow("body");
+                    int dateIndex = cursor.getColumnIndexOrThrow("date");
+                    
+                    do {
+                        String sender = cursor.getString(addressIndex);
+                        String body = cursor.getString(bodyIndex);
+                        long smsDate = cursor.getLong(dateIndex);
+                        
+                        // Check if sender looks like a bank code (usually has a hyphen like AX-KOTAKB, JD-KOTAKD)
+                        boolean isBankSender = sender != null && (sender.contains("-") || sender.contains("KOTAK") || sender.contains("SBI") || sender.contains("HDFC") || sender.contains("ICICI") || sender.contains("AXIS"));
+                        
+                        if (isBankSender) {
+                            // Extract amount robustly
+                            Pattern amountPattern = Pattern.compile("(?i)(?:rs\\.?|inr|₹)\\s*([\\d,]+\\.?\\d*)");
+                            Matcher amountMatcher = amountPattern.matcher(body);
+                            double amount = -1;
+                            if (amountMatcher.find()) {
+                                amount = Double.parseDouble(amountMatcher.group(1).replace(",", ""));
+                            } else {
+                                Pattern altAmountPattern = Pattern.compile("(?i)([\\d,]+\\.?\\d*)\\s*(?:rs\\.?|inr|₹)");
+                                Matcher altMatcher = altAmountPattern.matcher(body);
+                                if (altMatcher.find()) {
+                                    amount = Double.parseDouble(altMatcher.group(1).replace(",", ""));
+                                }
+                            }
+                            
+                            if (amount > 0) {
+                                String lowerBody = body.toLowerCase();
+                                boolean isDebit = lowerBody.contains("paid") || lowerBody.contains("sent") || lowerBody.contains("debited") || lowerBody.contains("spent");
+                                boolean isCredit = lowerBody.contains("credited") || lowerBody.contains("received") || lowerBody.contains("added");
+                                
+                                if (isDebit || isCredit) {
+                                    totalFound++;
+                                    
+                                    // Extract reference number
+                                    String refNum = null;
+                                    Pattern refPattern = Pattern.compile("(?i)(?:ref|upi|txn|id|reference)\\.?\\s*(?:no\\.?|num\\.?|number)?\\s*(\\d{12}|\\d{6,})");
+                                    Matcher refMatcher = refPattern.matcher(body);
+                                    if (refMatcher.find()) {
+                                        refNum = refMatcher.group(1);
+                                    }
+                                    
+                                    String finalRefNum = refNum != null ? refNum : "SMS_" + (smsDate / 1000) + "_" + (int)(amount);
+                                    
+                                    // Duplicate check
+                                    LocalTransaction existing = dao.getTransactionByRefNum(finalRefNum);
+                                    if (existing == null) {
+                                        // Save transaction
+                                        LocalTransaction tx = new LocalTransaction();
+                                        tx.id = UUID.randomUUID().toString();
+                                        tx.amount = amount;
+                                        tx.timestamp = smsDate;
+                                        
+                                        // Estimate merchant
+                                        String merchant = "Unknown Merchant";
+                                        if (body.contains("to ")) {
+                                            int start = body.indexOf("to ") + 3;
+                                            String rawMerchant = body.substring(start).trim();
+                                            int onIndex = rawMerchant.indexOf("on ");
+                                            if (onIndex > 0) {
+                                                merchant = rawMerchant.substring(0, onIndex).trim();
+                                            } else {
+                                                merchant = rawMerchant;
+                                            }
+                                        } else if (body.contains("at ")) {
+                                            int start = body.indexOf("at ") + 3;
+                                            merchant = body.substring(start).trim();
+                                        }
+                                        
+                                        if (merchant.length() > 30) {
+                                            merchant = merchant.substring(0, 30).trim();
+                                        }
+                                        
+                                        tx.merchant = merchant;
+                                        tx.referenceNumber = finalRefNum;
+                                        tx.category = "Other";
+                                        tx.transactionType = isDebit ? "DEBIT" : "CREDIT";
+                                        tx.bank = sender.contains("KOTAK") ? "Kotak Bank" : sender;
+                                        tx.isDeleted = false;
+                                        tx.updatedAt = System.currentTimeMillis();
+                                        
+                                        dao.insertOrReplace(tx);
+                                        newSaved++;
+                                    }
+                                }
+                            }
+                        }
+                    } while (cursor.moveToNext());
+                }
+                
+                final int finalFound = totalFound;
+                final int finalSaved = newSaved;
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    AppLogger.log("SMS Scan: Found " + finalFound + " alerts, imported " + finalSaved + " new transactions.");
+                    Toast.makeText(MainActivity.this, "Scan complete! Imported " + finalSaved + " new transactions.", Toast.LENGTH_LONG).show();
+                    updateSyncStats();
+                    
+                    if (finalSaved > 0) {
+                        triggerSyncNow();
+                    }
+                });
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+                AppLogger.log("SMS Scan Error: " + e.getMessage());
+            } finally {
+                if (cursor != null) cursor.close();
+            }
+        });
     }
 }

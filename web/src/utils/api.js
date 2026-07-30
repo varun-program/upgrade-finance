@@ -136,6 +136,42 @@ export const dataService = {
     }
   },
 
+  deleteAllTransactions: async () => {
+    const local = getLocalData('local_transactions');
+    local.forEach(t => {
+      t.isDeleted = true;
+      t.updatedAt = Date.now();
+    });
+    saveLocalData('local_transactions', local);
+    if (!isLocalMode()) {
+      try {
+        await api.delete('/transactions/all');
+      } catch (e) {
+        console.log('Marked all as deleted locally, will sync later.');
+      }
+    }
+  },
+
+  updateTransaction: async (id, updatedFields) => {
+    const local = getLocalData('local_transactions');
+    const idx = local.findIndex(t => t.id === id);
+    let updatedTx = null;
+    if (idx >= 0) {
+      local[idx] = { ...local[idx], ...updatedFields, updatedAt: Date.now() };
+      updatedTx = local[idx];
+      saveLocalData('local_transactions', local);
+    }
+    if (!isLocalMode()) {
+      try {
+        const res = await api.put(`/transactions/${id}`, updatedFields);
+        return res.data;
+      } catch (e) {
+        console.log('Updated locally, will sync later.');
+      }
+    }
+    return updatedTx;
+  },
+
   getBudgets: async () => {
     if (isLocalMode()) {
       return getLocalData('local_budgets').filter(b => !b.isDeleted);

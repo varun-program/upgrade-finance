@@ -40,11 +40,12 @@ public class TransactionNotificationListenerService extends NotificationListener
         String body = text.toString();
         String titleStr = title != null ? title.toString() : "";
 
-        // Whitelist packages: payment apps OR SMS apps
+        // Whitelist packages: payment apps OR SMS apps OR banking apps
         boolean isPaymentApp = GPAY_PKG.equals(pkg) || PHONEPE_PKG.equals(pkg) || PAYTM_PKG.equals(pkg);
         boolean isSmsApp = pkg.contains("messaging") || pkg.contains("mms") || pkg.contains("sms") || pkg.contains("telephony");
+        boolean isBankApp = pkg.contains("kotak") || pkg.contains("kbank") || pkg.contains("msf") || pkg.contains("sbi") || pkg.contains("hdfc") || pkg.contains("icici") || pkg.contains("axis");
 
-        if (!isPaymentApp && !isSmsApp) {
+        if (!isPaymentApp && !isSmsApp && !isBankApp) {
             return; // Ignore other apps (e.g. WhatsApp, emails)
         }
 
@@ -55,15 +56,36 @@ public class TransactionNotificationListenerService extends NotificationListener
     }
 
     private void parseAndSaveNotification(String body, String title, String pkg) {
-        Matcher matcher = PAYMENT_PATTERN.matcher(body);
-        if (!matcher.find()) {
-            AppLogger.log("Notif Parser: Ignored (no payment match). Text: " + (body.length() > 30 ? body.substring(0, 30) + "..." : body));
-            return;
-        }
-
         try {
-            double amount = Double.parseDouble(matcher.group(1).replace(",", ""));
-            boolean isDebit = body.toLowerCase().contains("paid") || body.toLowerCase().contains("sent") || body.toLowerCase().contains("debited");
+            double amount = -1;
+
+            // 1. Robust amount extraction supporting Rs, INR, ₹, and currency placement
+            Pattern amountPattern = Pattern.compile("(?i)(?:rs\\.?|inr|₹)\\s*([\\d,]+\\.?\\d*)");
+            Matcher amountMatcher = amountPattern.matcher(body);
+            if (amountMatcher.find()) {
+                amount = Double.parseDouble(amountMatcher.group(1).replace(",", ""));
+            } else {
+                Pattern altAmountPattern = Pattern.compile("(?i)([\\d,]+\\.?\\d*)\\s*(?:rs\\.?|inr|₹)");
+                Matcher altMatcher = altAmountPattern.matcher(body);
+                if (altMatcher.find()) {
+                    amount = Double.parseDouble(altMatcher.group(1).replace(",", ""));
+                }
+            }
+
+            if (amount <= 0) {
+                AppLogger.log("Notif Parser: Ignored (no amount found). Text: " + (body.length() > 35 ? body.substring(0, 35) + "..." : body));
+                return;
+            }
+
+            // 2. Transaction type detection
+            String lowerBody = body.toLowerCase();
+            boolean isDebit = lowerBody.contains("paid") || lowerBody.contains("sent") || lowerBody.contains("debited") || lowerBody.contains("spent");
+            boolean isCredit = lowerBody.contains("credited") || lowerBody.contains("received") || lowerBody.contains("added");
+
+            if (!isDebit && !isCredit) {
+                AppLogger.log("Notif Parser: Ignored (not debit/credit). Text: " + (body.length() > 35 ? body.substring(0, 35) + "..." : body));
+                return;
+            }
 
             String merchant = "Unknown Merchant";
             if (body.contains("to ")) {
@@ -78,6 +100,11 @@ public class TransactionNotificationListenerService extends NotificationListener
             } else if (body.contains("at ")) {
                 int start = body.indexOf("at ") + 3;
                 merchant = body.substring(start).trim();
+            }
+
+            // Clean up merchant name (truncate if too long or trailing dots/dashes)
+            if (merchant.length() > 30) {
+                merchant = merchant.substring(0, 30).trim();
             }
 
             // Estimate Category
@@ -108,7 +135,7 @@ public class TransactionNotificationListenerService extends NotificationListener
 
             // Extract reference number
             String refNum = null;
-            Pattern refPattern = Pattern.compile("(?i)(?:ref|upi|txn|id)\\.?\\s*(\\d{12}|\\d{6,})");
+            Pattern refPattern = Pattern.compile("(?i)(?:ref|upi|txn|id|reference)\\.?\\s*(?:no\\.?|num\\.?|number)?\\s*(\\d{12}|\\d{6,})");
             Matcher refMatcher = refPattern.matcher(body);
             if (refMatcher.find()) {
                 refNum = refMatcher.group(1);
@@ -149,5 +176,17 @@ public class TransactionNotificationListenerService extends NotificationListener
             Log.e(TAG, "Error matching notification regex", e);
             AppLogger.log("Notif Parser Error: " + e.getMessage());
         }
+    }
+
+    @Override
+    public void onListenerConnected() {
+        Log.d(TAG, "Notification listener connected successfully.");
+        AppLogger.log("Notif Service: Connected!");
+    }
+
+    @Override
+    public void onListenerDisconnected() {
+        Log.d(TAG, "Notification listener disconnected.");
+        AppLogger.log("Notif Service: Disconnected!");
     }
 }

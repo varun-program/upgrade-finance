@@ -16,6 +16,10 @@ export default function Dashboard() {
   const [bank, setBank] = useState('SBI');
   const [txType, setTxType] = useState('DEBIT');
   
+  // Edit & Delete All States
+  const [editingId, setEditingId] = useState(null);
+  const [editMerchant, setEditMerchant] = useState('');
+  
   useEffect(() => {
     loadTransactions();
   }, []);
@@ -54,6 +58,29 @@ export default function Dashboard() {
   const handleDelete = async (id) => {
     await dataService.deleteTransaction(id);
     loadTransactions();
+  };
+
+  const handleDeleteAll = async () => {
+    if (window.confirm("Are you sure you want to delete all transactions from your dashboard?")) {
+      await dataService.deleteAllTransactions();
+      loadTransactions();
+    }
+  };
+
+  const handleEditStart = (tx) => {
+    setEditingId(tx.id);
+    setEditMerchant(tx.merchant || '');
+  };
+
+  const handleEditSave = async (id) => {
+    if (!editMerchant.trim()) return;
+    await dataService.updateTransaction(id, { merchant: editMerchant });
+    setEditingId(null);
+    loadTransactions();
+  };
+
+  const handleEditCancel = () => {
+    setEditingId(null);
   };
 
   // Metrics Calculations
@@ -243,7 +270,17 @@ export default function Dashboard() {
         {/* Transactions list */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-2xl font-bold tracking-tight">Transactions Log</h2>
+            <div className="flex items-center space-x-4">
+              <h2 className="text-2xl font-bold tracking-tight">Transactions Log</h2>
+              {transactions.length > 0 && (
+                <button
+                  onClick={handleDeleteAll}
+                  className="text-xs px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 font-semibold transition-colors"
+                >
+                  Delete All
+                </button>
+              )}
+            </div>
             <div className="flex items-center space-x-2 w-full sm:w-auto">
               <div className="relative flex-grow sm:flex-grow-0">
                 <Search className="absolute inset-y-0 left-0 pl-3 h-full w-4 text-slate-400" />
@@ -284,7 +321,41 @@ export default function Dashboard() {
                         {tx.transactionType === 'DEBIT' ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
                       </div>
                       <div>
-                        <div className="font-semibold text-sm">{tx.merchant || 'Unknown Merchant'}</div>
+                        {editingId === tx.id ? (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="text"
+                              value={editMerchant}
+                              onChange={(e) => setEditMerchant(e.target.value)}
+                              className="text-xs px-2 py-0.5 rounded border border-indigo-400 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                            />
+                            <button
+                              onClick={() => handleEditSave(tx.id)}
+                              className="p-1 text-green-500 hover:text-green-600"
+                              title="Save"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={handleEditCancel}
+                              className="p-1 text-red-400 hover:text-red-500 text-xs font-bold"
+                              title="Cancel"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <div className="font-semibold text-sm">{tx.merchant || 'Unknown Merchant'}</div>
+                            <button
+                              onClick={() => handleEditStart(tx)}
+                              className="text-[10px] opacity-60 hover:opacity-100 transition-opacity"
+                              title="Rename spend description"
+                            >
+                              ✏️
+                            </button>
+                          </div>
+                        )}
                         <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-0.5">
                           <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded font-medium">{tx.category}</span>
                           <span>•</span>

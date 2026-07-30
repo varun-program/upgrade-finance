@@ -22,7 +22,7 @@ public class SMSReceiver extends BroadcastReceiver {
     // Simple robust regex matching debit/credit actions
     private static final Pattern DEBIT_PATTERN = Pattern.compile("(?i)(?:debited|spent|sent|paid)\\s*(?:rs\\.?|inr)\\s*([\\d,]+\\.?\\d*)");
     private static final Pattern CREDIT_PATTERN = Pattern.compile("(?i)(?:credited|received|added)\\s*(?:rs\\.?|inr)\\s*([\\d,]+\\.?\\d*)");
-    private static final Pattern REF_PATTERN = Pattern.compile("(?i)(?:ref|upi|txn|id)\\.?\\s*(\\d{12}|\\d{6,})");
+    private static final Pattern REF_PATTERN = Pattern.compile("(?i)(?:ref|upi|txn|id|reference)\\.?\\s*(?:no\\.?|num\\.?|number)?\\s*(\\d{12}|\\d{6,})");
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -52,19 +52,36 @@ public class SMSReceiver extends BroadcastReceiver {
     }
 
     public void parseAndSaveTransaction(Context context, String body, String sender) {
-        boolean isDebit = DEBIT_PATTERN.matcher(body).find();
-        boolean isCredit = CREDIT_PATTERN.matcher(body).find();
-        
-        if (!isDebit && !isCredit) {
-            AppLogger.log("SMS Parser: Ignored (no payment match). Body: " + (body.length() > 30 ? body.substring(0, 30) + "..." : body));
-            return; // Not a payment message
-        }
-
-        Matcher amountMatcher = isDebit ? DEBIT_PATTERN.matcher(body) : CREDIT_PATTERN.matcher(body);
-        if (!amountMatcher.find()) return;
-
         try {
-            double amount = Double.parseDouble(amountMatcher.group(1).replace(",", ""));
+            double amount = -1;
+
+            // 1. Robust amount extraction supporting Rs, INR, ₹, and currency placement
+            Pattern amountPattern = Pattern.compile("(?i)(?:rs\\.?|inr|₹)\\s*([\\d,]+\\.?\\d*)");
+            Matcher amountMatcher = amountPattern.matcher(body);
+            if (amountMatcher.find()) {
+                amount = Double.parseDouble(amountMatcher.group(1).replace(",", ""));
+            } else {
+                Pattern altAmountPattern = Pattern.compile("(?i)([\\d,]+\\.?\\d*)\\s*(?:rs\\.?|inr|₹)");
+                Matcher altMatcher = altAmountPattern.matcher(body);
+                if (altMatcher.find()) {
+                    amount = Double.parseDouble(altMatcher.group(1).replace(",", ""));
+                }
+            }
+
+            if (amount <= 0) {
+                AppLogger.log("SMS Parser: Ignored (no amount found). Body: " + (body.length() > 30 ? body.substring(0, 30) + "..." : body));
+                return;
+            }
+
+            // 2. Transaction type detection
+            String lowerBody = body.toLowerCase();
+            boolean isDebit = lowerBody.contains("paid") || lowerBody.contains("sent") || lowerBody.contains("debited") || lowerBody.contains("spent");
+            boolean isCredit = lowerBody.contains("credited") || lowerBody.contains("received") || lowerBody.contains("added");
+
+            if (!isDebit && !isCredit) {
+                AppLogger.log("SMS Parser: Ignored (not debit/credit). Body: " + (body.length() > 30 ? body.substring(0, 30) + "..." : body));
+                return;
+            }
             
             // Extract reference number
             String refNum = null;
@@ -75,18 +92,39 @@ public class SMSReceiver extends BroadcastReceiver {
 
             // Estimate merchant name from SMS keywords
             String merchant = "Unknown Merchant";
-            if (body.contains("Swiggy") || body.contains("swiggy")) merchant = "Swiggy";
-            else if (body.contains("Zomato") || body.contains("zomato")) merchant = "Zomato";
-            else if (body.contains("Amazon") || body.contains("amazon")) merchant = "Amazon";
-            else if (body.contains("Flipkart") || body.contains("flipkart")) merchant = "Flipkart";
-            else if (body.contains("Uber") || body.contains("uber")) merchant = "Uber";
-            else if (body.contains("Rapido") || body.contains("rapido")) merchant = "Rapido";
+            if (body.contains("to ")) {
+                int start = body.indexOf("to ") + 3;
+                String rawMerchant = body.substring(start).trim();
+                int onIndex = rawMerchant.indexOf("on ");
+                if (onIndex > 0) {
+                    merchant = rawMerchant.substring(0, onIndex).trim();
+                } else {
+                    merchant = rawMerchant;
+                }
+            } else if (body.contains("at ")) {
+                int start = body.indexOf("at ") + 3;
+                merchant = body.substring(start).trim();
+            }
+
+            if (merchant.equals("Unknown Merchant")) {
+                if (body.contains("Swiggy") || body.contains("swiggy")) merchant = "Swiggy";
+                else if (body.contains("Zomato") || body.contains("zomato")) merchant = "Zomato";
+                else if (body.contains("Amazon") || body.contains("amazon")) merchant = "Amazon";
+                else if (body.contains("Flipkart") || body.contains("flipkart")) merchant = "Flipkart";
+                else if (body.contains("Uber") || body.contains("uber")) merchant = "Uber";
+                else if (body.contains("Rapido") || body.contains("rapido")) merchant = "Rapido";
+            }
+
+            // Clean up merchant name (truncate if too long or trailing dots/dashes)
+            if (merchant.length() > 30) {
+                merchant = merchant.substring(0, 30).trim();
+            }
 
             // Extract Category
             String category = "Other";
-            if (merchant.equals("Swiggy") || merchant.equals("Zomato")) category = "Food";
-            else if (merchant.equals("Amazon") || merchant.equals("Flipkart")) category = "Shopping";
-            else if (merchant.equals("Uber") || merchant.equals("Rapido")) category = "Travel";
+            if (merchant.toLowerCase().contains("swiggy") || merchant.toLowerCase().contains("zomato")) category = "Food";
+            else if (merchant.toLowerCase().contains("amazon") || merchant.toLowerCase().contains("flipkart")) category = "Shopping";
+            else if (merchant.toLowerCase().contains("uber") || merchant.toLowerCase().contains("rapido")) category = "Travel";
 
             final String finalRefNum = refNum;
             final double finalAmount = amount;
@@ -96,10 +134,12 @@ public class SMSReceiver extends BroadcastReceiver {
             
             String bankName = "Unknown Bank";
             if (sender != null) {
-                if (sender.contains("SBI")) bankName = "SBI";
+                if (sender.contains("KOTAK")) bankName = "Kotak Bank";
+                else if (sender.contains("SBI")) bankName = "SBI";
                 else if (sender.contains("HDFC")) bankName = "HDFC";
                 else if (sender.contains("ICICI")) bankName = "ICICI";
                 else if (sender.contains("AXIS")) bankName = "Axis";
+                else bankName = sender;
             }
             final String finalBank = bankName;
 
@@ -112,6 +152,7 @@ public class SMSReceiver extends BroadcastReceiver {
                     LocalTransaction existing = dao.getTransactionByRefNum(finalRefNum);
                     if (existing != null) {
                         Log.d(TAG, "Duplicate detected via RefNum: " + finalRefNum + ". Skipping.");
+                        AppLogger.log("SMS Parser: Duplicate skipped (Ref: " + finalRefNum + ")");
                         return;
                     }
                 }

@@ -96,6 +96,19 @@ public class TransactionController {
         return ResponseEntity.ok().body("Transaction marked as deleted");
     }
 
+    @DeleteMapping("/all")
+    public ResponseEntity<?> deleteAllTransactions() {
+        User user = getAuthenticatedUser();
+        List<Transaction> transactions = transactionRepository.findByUserAndIsDeletedFalse(user);
+        long now = System.currentTimeMillis();
+        for (Transaction tx : transactions) {
+            tx.setDeleted(true);
+            tx.setUpdatedAt(now);
+        }
+        transactionRepository.saveAll(transactions);
+        return ResponseEntity.ok().body("All transactions marked as deleted");
+    }
+
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportTransactions(@RequestParam("format") String format) {
         User user = getAuthenticatedUser();

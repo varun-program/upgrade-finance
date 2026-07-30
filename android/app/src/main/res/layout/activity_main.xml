@@ -32,6 +32,14 @@
                 android:paddingTop="20dp"
                 android:paddingBottom="20dp">
 
+                <ImageView
+                    android:id="@+id/ivAppLogo"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/app_logo"
+                    android:layout_marginBottom="12dp"
+                    android:contentDescription="Upgrade Finance Logo" />
+
                 <TextView
                     android:id="@+id/tvAppTitle"
                     android:layout_width="wrap_content"
@@ -327,7 +335,18 @@
                         android:layout_marginTop="8dp"
                         android:backgroundTint="#4F46E5"
                         android:textColor="#FFFFFF" />
+
+                    <Button
+                        android:id="@+id/btnScanInbox"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="Scan SMS Inbox (Fallback)"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="#F59E0B"
+                        android:textColor="#FFFFFF" />
                 </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
             <!-- Diagnostic Logs Card -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
