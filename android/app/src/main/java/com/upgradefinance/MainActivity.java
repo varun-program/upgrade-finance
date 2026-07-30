@@ -26,6 +26,7 @@ import androidx.work.WorkManager;
 import com.google.gson.Gson;
 import com.upgradefinance.db.AppDatabase;
 import com.upgradefinance.receiver.SMSReceiver;
+import com.upgradefinance.utils.AppLogger;
 import com.upgradefinance.worker.SyncWorker;
 
 import java.io.InputStreamReader;
@@ -43,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
 
     private EditText etServerUrl, etEmail, etPassword;
     private Button btnConnect, btnDisconnect, btnGrantSms, btnGrantNotifications, btnSyncNow, btnSimulateSms;
-    private TextView tvSmsPermissionStatus, tvNotificationStatus, tvLastSync, tvTxCount, tvUserEmail, tvServerStatus;
+    private TextView tvSmsPermissionStatus, tvNotificationStatus, tvLastSync, tvTxCount, tvUserEmail, tvServerStatus, tvLogs;
     private View cardLogin, cardStatus;
 
     private SharedPreferences prefs;
@@ -72,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         tvServerStatus = findViewById(R.id.tvServerStatus);
         cardLogin = findViewById(R.id.cardLogin);
         cardStatus = findViewById(R.id.cardStatus);
+        tvLogs = findViewById(R.id.tvLogs);
 
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
@@ -79,6 +81,9 @@ public class MainActivity extends AppCompatActivity {
         setupListeners();
         updatePermissionsStatus();
         updateSyncStats();
+
+        AppLogger.setListener(() -> updateLogDisplay());
+        updateLogDisplay();
     }
 
     @Override
@@ -302,5 +307,18 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         });
+    }
+
+    private void updateLogDisplay() {
+        java.util.List<String> logLines = AppLogger.getLogs();
+        if (logLines.isEmpty()) {
+            tvLogs.setText("No diagnostic events logged yet.");
+            return;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String line : logLines) {
+            builder.append(line).append("\n");
+        }
+        tvLogs.setText(builder.toString());
     }
 }

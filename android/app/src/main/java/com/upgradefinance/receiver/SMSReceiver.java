@@ -14,6 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.upgradefinance.utils.AppLogger;
 
 public class SMSReceiver extends BroadcastReceiver {
     private static final String TAG = "SMSReceiver";
@@ -40,6 +41,7 @@ public class SMSReceiver extends BroadcastReceiver {
                 String body = message.getMessageBody();
 
                 Log.d(TAG, "SMS Received from: " + sender + " Body: " + body);
+                AppLogger.log("SMS: Received from " + sender);
                 
                 // Parse transaction from body text
                 parseAndSaveTransaction(context, body, sender);
@@ -53,7 +55,10 @@ public class SMSReceiver extends BroadcastReceiver {
         boolean isDebit = DEBIT_PATTERN.matcher(body).find();
         boolean isCredit = CREDIT_PATTERN.matcher(body).find();
         
-        if (!isDebit && !isCredit) return; // Not a payment message
+        if (!isDebit && !isCredit) {
+            AppLogger.log("SMS Parser: Ignored (no payment match). Body: " + (body.length() > 30 ? body.substring(0, 30) + "..." : body));
+            return; // Not a payment message
+        }
 
         Matcher amountMatcher = isDebit ? DEBIT_PATTERN.matcher(body) : CREDIT_PATTERN.matcher(body);
         if (!amountMatcher.find()) return;
@@ -125,10 +130,12 @@ public class SMSReceiver extends BroadcastReceiver {
 
                 dao.insertOrReplace(tx);
                 Log.d(TAG, "Successfully parsed and saved SMS transaction: ₹" + finalAmount);
+                AppLogger.log("SMS Parser: Saved ₹" + finalAmount + " (" + finalMerchant + ") to local DB");
             });
 
         } catch (Exception e) {
             Log.e(TAG, "Failed parsing transaction metrics", e);
+            AppLogger.log("SMS Parser Error: " + e.getMessage());
         }
     }
 }

@@ -12,6 +12,7 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.upgradefinance.utils.AppLogger;
 
 public class TransactionNotificationListenerService extends NotificationListenerService {
     private static final String TAG = "NotificationListener";
@@ -48,13 +49,17 @@ public class TransactionNotificationListenerService extends NotificationListener
         }
 
         Log.d(TAG, "Notification intercepted. Pkg: " + pkg + " Title: " + titleStr + " Text: " + body);
+        AppLogger.log("Notif: Intercepted " + (titleStr.isEmpty() ? pkg : titleStr));
 
         parseAndSaveNotification(body, titleStr, pkg);
     }
 
     private void parseAndSaveNotification(String body, String title, String pkg) {
         Matcher matcher = PAYMENT_PATTERN.matcher(body);
-        if (!matcher.find()) return;
+        if (!matcher.find()) {
+            AppLogger.log("Notif Parser: Ignored (no payment match). Text: " + (body.length() > 30 ? body.substring(0, 30) + "..." : body));
+            return;
+        }
 
         try {
             double amount = Double.parseDouble(matcher.group(1).replace(",", ""));
@@ -118,6 +123,7 @@ public class TransactionNotificationListenerService extends NotificationListener
                 LocalTransaction existing = dao.getTransactionByRefNum(finalRefNum);
                 if (existing != null) {
                     Log.d(TAG, "Duplicate transaction matching refNum: " + finalRefNum + ". Skipping.");
+                    AppLogger.log("Notif Parser: Duplicate skipped (Ref: " + finalRefNum + ")");
                     return;
                 }
 
@@ -136,10 +142,12 @@ public class TransactionNotificationListenerService extends NotificationListener
 
                 dao.insertOrReplace(tx);
                 Log.d(TAG, "Saved push transaction: ₹" + finalAmount + " for " + finalMerchant);
+                AppLogger.log("Notif Parser: Saved ₹" + finalAmount + " (" + finalMerchant + ") to local DB");
             });
 
         } catch (Exception e) {
             Log.e(TAG, "Error matching notification regex", e);
+            AppLogger.log("Notif Parser Error: " + e.getMessage());
         }
     }
 }

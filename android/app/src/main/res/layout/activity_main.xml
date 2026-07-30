@@ -328,6 +328,42 @@
                         android:backgroundTint="#4F46E5"
                         android:textColor="#FFFFFF" />
                 </LinearLayout>
+            <!-- Diagnostic Logs Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="#FFFFFF">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Diagnostic Event Logs"
+                        android:textColor="#374151"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="12dp"/>
+
+                    <TextView
+                        android:id="@+id/tvLogs"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minLines="5"
+                        android:maxLines="15"
+                        android:scrollbars="vertical"
+                        android:text="Logs will appear here when events occur..."
+                        android:textColor="#4B5563"
+                        android:fontFamily="monospace"
+                        android:textSize="11sp" />
+                </LinearLayout>
             </androidx.cardview.widget.CardView>
         </LinearLayout>
     </ScrollView>

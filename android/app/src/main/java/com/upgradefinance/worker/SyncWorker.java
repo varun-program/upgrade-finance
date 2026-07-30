@@ -11,6 +11,7 @@ import com.google.gson.reflect.TypeToken;
 import com.upgradefinance.db.AppDatabase;
 import com.upgradefinance.db.TransactionDao;
 import com.upgradefinance.model.LocalTransaction;
+import com.upgradefinance.utils.AppLogger;
 
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -37,6 +38,7 @@ public class SyncWorker extends Worker {
 
         if (token == null) {
             Log.d(TAG, "No sync token found. Skipping cloud sync.");
+            AppLogger.log("Sync: Skipped (no login token)");
             return Result.success(); // Local-only mode, skip sync
         }
 
@@ -47,6 +49,7 @@ public class SyncWorker extends Worker {
         try {
             // Find local modifications since last sync
             List<LocalTransaction> changes = dao.getChangesSince(lastSync);
+            AppLogger.log("Sync: Initiated. Found " + changes.size() + " unsynced local changes.");
             if (changes.isEmpty()) {
                 Log.d(TAG, "No local changes to sync.");
             }
@@ -89,14 +92,17 @@ public class SyncWorker extends Worker {
                 // Save new sync timestamp
                 prefs.edit().putLong("last_sync_timestamp", newSyncTime).apply();
                 Log.d(TAG, "Sync successfully completed at " + newSyncTime);
+                AppLogger.log("Sync: Success! Downloaded cloud updates.");
                 return Result.success();
             } else {
                 Log.e(TAG, "Server returned sync error code: " + code);
+                AppLogger.log("Sync: Failed (HTTP " + code + ")");
                 return Result.retry();
             }
 
         } catch (Exception e) {
             Log.e(TAG, "Sync execution failed", e);
+            AppLogger.log("Sync Error: " + e.getMessage());
             return Result.retry();
         }
     }
