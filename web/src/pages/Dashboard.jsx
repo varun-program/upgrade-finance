@@ -34,6 +34,20 @@ export default function Dashboard() {
   const [newBankName, setNewBankName] = useState('');
   const [newBankSuffix, setNewBankSuffix] = useState('');
   const [newBankStart, setNewBankStart] = useState('');
+
+  // Budget States
+  const [monthlyBudget, setMonthlyBudget] = useState(() => {
+    const saved = localStorage.getItem('monthly_budget');
+    return saved ? parseFloat(saved) : 30000;
+  });
+  const [categoryBudgets, setCategoryBudgets] = useState(() => {
+    const saved = localStorage.getItem('category_budgets');
+    return saved ? JSON.parse(saved) : { 'Food': 10000, 'Shopping': 10000, 'Travel': 5000 };
+  });
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [tempBudgetVal, setTempBudgetVal] = useState('');
+  const [editingCatBudget, setEditingCatBudget] = useState(null);
+  const [tempCatBudgetVal, setTempCatBudgetVal] = useState('');
   
   useEffect(() => {
     loadTransactions();
@@ -144,6 +158,24 @@ export default function Dashboard() {
     }
   };
 
+  const handleSaveBudget = (e) => {
+    e.preventDefault();
+    const parsed = parseFloat(tempBudgetVal);
+    if (isNaN(parsed) || parsed <= 0) return;
+    setMonthlyBudget(parsed);
+    localStorage.setItem('monthly_budget', parsed.toString());
+    setEditingBudget(false);
+  };
+
+  const handleSaveCatBudget = (catName) => {
+    const parsed = parseFloat(tempCatBudgetVal);
+    if (isNaN(parsed)) return;
+    const updated = { ...categoryBudgets, [catName]: parsed };
+    setCategoryBudgets(updated);
+    localStorage.setItem('category_budgets', JSON.stringify(updated));
+    setEditingCatBudget(null);
+  };
+
   // Metrics Calculations
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -201,6 +233,19 @@ export default function Dashboard() {
   }, [transactions, startingBalances]);
 
   const categories = ['Food', 'Travel', 'Shopping', 'Fuel', 'Entertainment', 'Healthcare', 'Bills', 'Education', 'Savings', 'Other'];
+
+  const currentMonthCategorySpends = React.useMemo(() => {
+    const spends = {};
+    categories.forEach(c => { spends[c] = 0; });
+    
+    transactions
+      .filter(t => t.timestamp >= startOfMonth && t.transactionType === 'DEBIT')
+      .forEach(t => {
+        const cat = t.category || 'Other';
+        spends[cat] = (spends[cat] || 0) + t.amount;
+      });
+    return spends;
+  }, [transactions, startOfMonth]);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -485,121 +530,240 @@ export default function Dashboard() {
 
         {/* Sidebar Info Panels */}
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold tracking-tight">My Accounts</h2>
-          <div className="glass p-6 rounded-2xl shadow-sm space-y-4 border border-slate-100 dark:border-slate-900/50">
-            {bankAccounts.map((acc) => (
-              <div key={acc.name} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${acc.name.includes('Kotak') ? 'bg-red-500/10 text-red-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
-                    <CreditCard className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm">{acc.name}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Suffix *{acc.suffix}</div>
+          
+          {/* Monthly Budget Card */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight">Monthly Budget</h2>
+            <div className="glass p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-900/50 space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Remaining Limit</div>
+                  <div className={`text-2xl font-black ${monthlyBudget - monthSpend < 0 ? 'text-red-500' : 'text-slate-850 dark:text-slate-100'}`}>
+                    ₹{(monthlyBudget - monthSpend).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div className="text-right">
-                  {editingBankName === acc.name ? (
-                    <div className="flex items-center space-x-1.5 mt-1">
+                  {editingBudget ? (
+                    <form onSubmit={handleSaveBudget} className="flex items-center space-x-1">
                       <input
                         type="number"
-                        value={editBalanceVal}
-                        onChange={(e) => setEditBalanceVal(e.target.value)}
-                        className="w-20 text-xs px-1.5 py-0.5 rounded border border-slate-300 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
-                        placeholder="Start val"
+                        value={tempBudgetVal}
+                        onChange={(e) => setTempBudgetVal(e.target.value)}
+                        className="w-16 text-xs px-1.5 py-0.5 rounded border border-indigo-400 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                        placeholder="Limit"
+                        required
                       />
-                      <button
-                        onClick={() => handleSaveBankBalance(acc.name)}
-                        className="text-xs text-green-500 hover:text-green-600 font-bold"
-                      >
-                        ✓
-                      </button>
-                      <button
-                        onClick={() => setEditingBankName(null)}
-                        className="text-xs text-slate-400 hover:text-slate-500"
-                      >
-                        ✕
-                      </button>
-                    </div>
+                      <button type="submit" className="text-xs text-green-500 hover:text-green-600 font-bold">✓</button>
+                      <button type="button" onClick={() => setEditingBudget(false)} className="text-xs text-slate-400 hover:text-slate-500">✕</button>
+                    </form>
                   ) : (
-                    <div className="flex items-center justify-end space-x-1">
-                      <div className="font-bold text-sm">₹{acc.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                    <div className="flex items-center space-x-1.5 justify-end">
+                      <div className="text-xs text-slate-500 font-medium">Limit: ₹{monthlyBudget.toLocaleString('en-IN')}</div>
                       <button
-                        onClick={() => {
-                          setEditingBankName(acc.name);
-                          setEditBalanceVal((startingBalances[acc.name] !== undefined ? startingBalances[acc.name] : 10000).toString());
-                        }}
+                        onClick={() => { setEditingBudget(true); setTempBudgetVal(monthlyBudget.toString()); }}
                         className="text-[10px] opacity-40 hover:opacity-100 transition-opacity"
-                        title="Set starting balance"
+                        title="Set total budget"
                       >
                         ✏️
-                      </button>
-                      <button
-                        onClick={() => handleDeleteBank(acc.name)}
-                        className="text-[10px] text-red-400 hover:text-red-600 ml-1.5 font-bold"
-                        title="Remove bank account"
-                      >
-                        ✕
                       </button>
                     </div>
                   )}
                 </div>
               </div>
-            ))}
-            
-            {/* Add Bank Account trigger */}
-            {!showAddBank ? (
-              <button
-                onClick={() => setShowAddBank(true)}
-                className="w-full py-2 border border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 text-xs text-slate-500 hover:text-indigo-500 rounded-xl transition-colors font-medium"
-              >
-                + Add Bank Account
-              </button>
-            ) : (
-              <form onSubmit={handleAddBank} className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800/50 space-y-2">
-                <input
-                  type="text"
-                  placeholder="Bank Name (e.g. SBI)"
-                  value={newBankName}
-                  onChange={(e) => setNewBankName(e.target.value)}
-                  className="w-full text-xs px-2 py-1 rounded border border-slate-200 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
-                  required
-                />
-                <div className="flex gap-2">
+              
+              {/* Progress bar */}
+              <div className="space-y-1">
+                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      (monthSpend / monthlyBudget) >= 1.0 ? 'bg-red-500' : (monthSpend / monthlyBudget) >= 0.8 ? 'bg-amber-500' : 'bg-indigo-500'
+                    }`}
+                    style={{ width: `${Math.min(100, (monthSpend / monthlyBudget) * 100)}%` }}
+                  ></div>
+                </div>
+                <div className="flex justify-between text-[10px] text-slate-450 font-medium">
+                  <span>Spent: ₹{monthSpend.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  <span>{((monthSpend / monthlyBudget) * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* My Accounts */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight">My Accounts</h2>
+            <div className="glass p-6 rounded-2xl shadow-sm space-y-4 border border-slate-100 dark:border-slate-900/50">
+              {bankAccounts.map((acc) => (
+                <div key={acc.name} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${acc.name.includes('Kotak') ? 'bg-red-500/10 text-red-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
+                      <CreditCard className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-sm">{acc.name}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Suffix *{acc.suffix}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {editingBankName === acc.name ? (
+                      <div className="flex items-center space-x-1.5 mt-1">
+                        <input
+                          type="number"
+                          value={editBalanceVal}
+                          onChange={(e) => setEditBalanceVal(e.target.value)}
+                          className="w-20 text-xs px-1.5 py-0.5 rounded border border-slate-300 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                          placeholder="Start val"
+                        />
+                        <button
+                          onClick={() => handleSaveBankBalance(acc.name)}
+                          className="text-xs text-green-500 hover:text-green-600 font-bold"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => setEditingBankName(null)}
+                          className="text-xs text-slate-400 hover:text-slate-500"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-end space-x-1">
+                        <div className="font-bold text-sm">₹{acc.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                        <button
+                          onClick={() => {
+                            setEditingBankName(acc.name);
+                            setEditBalanceVal((startingBalances[acc.name] !== undefined ? startingBalances[acc.name] : 10000).toString());
+                          }}
+                          className="text-[10px] opacity-40 hover:opacity-100 transition-opacity"
+                          title="Set starting balance"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBank(acc.name)}
+                          className="text-[10px] text-red-400 hover:text-red-600 ml-1.5 font-bold"
+                          title="Remove bank account"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Add Bank Account trigger */}
+              {!showAddBank ? (
+                <button
+                  onClick={() => setShowAddBank(true)}
+                  className="w-full py-2 border border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 text-xs text-slate-500 hover:text-indigo-500 rounded-xl transition-colors font-medium"
+                >
+                  + Add Bank Account
+                </button>
+              ) : (
+                <form onSubmit={handleAddBank} className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800/50 space-y-2">
                   <input
                     type="text"
-                    placeholder="Suffix (e.g. 9081)"
-                    value={newBankSuffix}
-                    onChange={(e) => setNewBankSuffix(e.target.value)}
-                    className="w-1/2 text-xs px-2 py-1 rounded border border-slate-200 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Starting Bal"
-                    value={newBankStart}
-                    onChange={(e) => setNewBankStart(e.target.value)}
-                    className="w-1/2 text-xs px-2 py-1 rounded border border-slate-200 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    placeholder="Bank Name (e.g. SBI)"
+                    value={newBankName}
+                    onChange={(e) => setNewBankName(e.target.value)}
+                    className="w-full text-xs px-2 py-1 rounded border border-slate-200 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
                     required
                   />
-                </div>
-                <div className="flex justify-end space-x-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddBank(false)}
-                    className="px-2 py-1 text-xs text-slate-500 hover:text-slate-600"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-2 py-1 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600 font-semibold"
-                  >
-                    Add
-                  </button>
-                </div>
-              </form>
-            )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Suffix (e.g. 9081)"
+                      value={newBankSuffix}
+                      onChange={(e) => setNewBankSuffix(e.target.value)}
+                      className="w-1/2 text-xs px-2 py-1 rounded border border-slate-200 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Starting Bal"
+                      value={newBankStart}
+                      onChange={(e) => setNewBankStart(e.target.value)}
+                      className="w-1/2 text-xs px-2 py-1 rounded border border-slate-200 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddBank(false)}
+                      className="px-2 py-1 text-xs text-slate-500 hover:text-slate-600"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-2 py-1 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600 font-semibold"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
+
+          {/* Category Budgets */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight">Category Limits</h2>
+            <div className="glass p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-900/50 space-y-4">
+              {categories.slice(0, 5).map(cat => {
+                const spent = currentMonthCategorySpends[cat] || 0;
+                const limit = categoryBudgets[cat] || 0;
+                const pct = limit > 0 ? (spent / limit) * 100 : 0;
+                return (
+                  <div key={cat} className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{cat}</span>
+                      <div className="text-right">
+                        {editingCatBudget === cat ? (
+                          <div className="flex items-center space-x-1">
+                            <input
+                              type="number"
+                              value={tempCatBudgetVal}
+                              onChange={(e) => setTempCatBudgetVal(e.target.value)}
+                              className="w-16 text-2xs px-1.5 py-0.5 rounded border border-indigo-400 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                              placeholder="Limit"
+                              required
+                            />
+                            <button onClick={() => handleSaveCatBudget(cat)} className="text-xs text-green-500 hover:text-green-600 font-bold">✓</button>
+                            <button onClick={() => setEditingCatBudget(null)} className="text-xs text-slate-400 hover:text-slate-500">✕</button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1 justify-end text-[10px] text-slate-405 font-medium">
+                            <span>₹{spent.toLocaleString('en-IN', { maximumFractionDigits: 0 })} / {limit > 0 ? `₹${limit.toLocaleString('en-IN')}` : 'No Limit'}</span>
+                            <button
+                              onClick={() => { setEditingCatBudget(cat); setTempCatBudgetVal(limit.toString()); }}
+                              className="text-[9px] opacity-40 hover:opacity-100 transition-opacity ml-1"
+                              title="Set limit"
+                            >
+                              ✏️
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {limit > 0 && (
+                      <div className="w-full bg-slate-100 dark:bg-slate-850 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-500 rounded-full ${
+                            pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${Math.min(100, pct)}%` }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
