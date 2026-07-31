@@ -247,6 +247,122 @@ export default function Dashboard() {
     return spends;
   }, [transactions, startOfMonth]);
 
+  // Dynamic Smart Insights Generator
+  const smartInsights = React.useMemo(() => {
+    const insights = [];
+
+    // 1. Budget Alerts
+    if (monthSpend >= monthlyBudget) {
+      insights.push({
+        type: 'danger',
+        title: 'Over Budget Warning',
+        desc: `You have exceeded your total monthly budget of ₹${monthlyBudget.toLocaleString('en-IN')} by ₹${(monthSpend - monthlyBudget).toLocaleString('en-IN')}. Consider freezing non-essential spending.`,
+        icon: '⚠️',
+      });
+    } else if (monthSpend >= monthlyBudget * 0.8) {
+      insights.push({
+        type: 'warning',
+        title: 'Nearing Budget Limit',
+        desc: `You have spent ${((monthSpend / monthlyBudget) * 100).toFixed(0)}% of your monthly budget (₹${monthSpend.toLocaleString('en-IN')} of ₹${monthlyBudget.toLocaleString('en-IN')}).`,
+        icon: '🔔',
+      });
+    }
+
+    // 2. Category Alerts
+    categories.forEach(cat => {
+      const spent = currentMonthCategorySpends[cat] || 0;
+      const limit = categoryBudgets[cat] || 0;
+      if (limit > 0) {
+        if (spent >= limit) {
+          insights.push({
+            type: 'danger',
+            title: `${cat} Overlimit`,
+            desc: `You spent ₹${spent.toLocaleString('en-IN')} on ${cat}, exceeding your ₹${limit.toLocaleString('en-IN')} budget tag.`,
+            icon: '🛑',
+          });
+        } else if (spent >= limit * 0.8) {
+          insights.push({
+            type: 'warning',
+            title: `${cat} Limit Approaching`,
+            desc: `You have consumed ${((spent / limit) * 100).toFixed(0)}% of your ${cat} budget allocation.`,
+            icon: '🍕',
+          });
+        }
+      }
+    });
+
+    // Get current month's debit transactions
+    const monthlyDebits = transactions.filter(t => t.timestamp >= startOfMonth && t.transactionType === 'DEBIT');
+
+    if (monthlyDebits.length > 0) {
+      // 3. Largest Purchase
+      const maxDebit = monthlyDebits.reduce((max, tx) => tx.amount > max.amount ? tx : max, monthlyDebits[0]);
+      if (maxDebit && maxDebit.amount > 0) {
+        insights.push({
+          type: 'info',
+          title: 'Largest Expense Detect',
+          desc: `Your highest expense this month was ₹${maxDebit.amount.toLocaleString('en-IN')} at "${maxDebit.merchant || 'Unknown Merchant'}".`,
+          icon: '💎',
+        });
+      }
+
+      // 4. Most Frequented Merchant
+      const merchantCounts = {};
+      monthlyDebits.forEach(tx => {
+        const m = tx.merchant || 'Unknown';
+        merchantCounts[m] = (merchantCounts[m] || 0) + 1;
+      });
+      let mostFrequent = null;
+      let maxCount = 0;
+      Object.keys(merchantCounts).forEach(m => {
+        if (merchantCounts[m] > maxCount && m !== 'Unknown') {
+          maxCount = merchantCounts[m];
+          mostFrequent = m;
+        }
+      });
+      if (mostFrequent && maxCount >= 3) {
+        insights.push({
+          type: 'info',
+          title: 'Frequent Merchant',
+          desc: `You visited "${mostFrequent}" ${maxCount} times this month. Consider bundling orders to save on delivery/surcharges.`,
+          icon: '🛍️',
+        });
+      }
+    }
+
+    // 5. Cashflow check
+    if (monthIncome > 0) {
+      if (monthSpend > monthIncome) {
+        insights.push({
+          type: 'danger',
+          title: 'Negative Cash Flow',
+          desc: `You spent ₹${(monthSpend - monthIncome).toLocaleString('en-IN')} more than your earned income this month.`,
+          icon: '📉',
+        });
+      } else if (monthIncome > monthSpend) {
+        const savingsPct = ((monthIncome - monthSpend) / monthIncome) * 100;
+        insights.push({
+          type: 'success',
+          title: 'Positive Cash Flow!',
+          desc: `Awesome! You saved ₹${(monthIncome - monthSpend).toLocaleString('en-IN')} (${savingsPct.toFixed(0)}% of your income) this month.`,
+          icon: '📈',
+        });
+      }
+    }
+
+    // Default insight if none generated
+    if (insights.length === 0) {
+      insights.push({
+        type: 'success',
+        title: 'All Systems Nominal',
+        desc: 'You are tracking well! No warnings, budget leaks, or excessive merchant charges detected this month.',
+        icon: '✨',
+      });
+    }
+
+    return insights;
+  }, [transactions, monthlyBudget, categoryBudgets, monthSpend, monthIncome, currentMonthCategorySpends, startOfMonth]);
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header Info */}
@@ -394,6 +510,36 @@ export default function Dashboard() {
           <div className="text-3xl font-extrabold tracking-tight">
             ₹{(monthIncome - monthSpend).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
+        </div>
+      </div>
+
+      {/* Smart AI Insights Panel */}
+      <div className="space-y-3">
+        <div className="flex items-center space-x-2">
+          <Sparkles className="h-5 w-5 text-indigo-500 animate-pulse" />
+          <h2 className="text-xl font-bold tracking-tight">Smart Financial Advisor</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {smartInsights.slice(0, 3).map((insight, idx) => (
+            <div 
+              key={idx} 
+              className={`p-4 rounded-2xl border transition-all duration-300 hover:translate-y-[-2px] flex items-start space-x-3.5 ${
+                insight.type === 'danger' 
+                  ? 'bg-red-500/5 border-red-500/20 dark:bg-red-950/10 dark:border-red-900/30' 
+                  : insight.type === 'warning' 
+                    ? 'bg-amber-500/5 border-amber-500/20 dark:bg-amber-955/10 dark:border-amber-900/30' 
+                    : insight.type === 'success' 
+                      ? 'bg-green-500/5 border-green-500/20 dark:bg-green-950/10 dark:border-green-900/30'
+                      : 'bg-indigo-500/5 border-indigo-500/20 dark:bg-indigo-950/10 dark:border-indigo-900/30'
+              }`}
+            >
+              <div className="text-2xl mt-0.5">{insight.icon}</div>
+              <div className="space-y-1">
+                <h4 className="font-bold text-sm tracking-tight">{insight.title}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{insight.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
