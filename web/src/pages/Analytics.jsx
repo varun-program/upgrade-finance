@@ -74,6 +74,37 @@ export default function Analytics() {
     Credit: dailyDataMap.Credit[day]
   }));
 
+  // Group by Month (Last 6 Months)
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthlyDataMap = { Debit: {}, Credit: {} };
+
+  // Setup default values for last 6 months
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().substring(2)}`;
+    monthlyDataMap.Debit[label] = 0;
+    monthlyDataMap.Credit[label] = 0;
+  }
+
+  transactions.forEach(t => {
+    const date = new Date(t.timestamp);
+    const label = `${monthNames[date.getMonth()]} ${date.getFullYear().toString().substring(2)}`;
+    if (monthlyDataMap.Debit[label] !== undefined) {
+      if (t.transactionType === 'DEBIT') {
+        monthlyDataMap.Debit[label] += t.amount;
+      } else {
+        monthlyDataMap.Credit[label] += t.amount;
+      }
+    }
+  });
+
+  const monthlyTrendData = Object.keys(monthlyDataMap.Debit).map(month => ({
+    name: month,
+    Debit: monthlyDataMap.Debit[month],
+    Credit: monthlyDataMap.Credit[month]
+  }));
+
   return (
     <div className="space-y-8">
       <div>
@@ -102,6 +133,24 @@ export default function Analytics() {
                   <Legend />
                   <Bar dataKey="Debit" fill="#ef4444" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="Credit" fill="#10b981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Bar Chart: Monthly Income vs Expenses (Last 6 Months) */}
+          <div className="p-6 glass rounded-2xl border shadow-sm space-y-4">
+            <h3 className="text-lg font-bold">Monthly Expense vs Income (Last 6 Months)</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => `₹${value.toFixed(2)}`} />
+                  <Legend />
+                  <Bar dataKey="Debit" name="Monthly Expense" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Credit" name="Monthly Income" fill="#10b981" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

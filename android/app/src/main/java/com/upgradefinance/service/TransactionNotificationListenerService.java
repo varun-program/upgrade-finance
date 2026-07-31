@@ -147,10 +147,17 @@ public class TransactionNotificationListenerService extends NotificationListener
                 TransactionDao dao = db.transactionDao();
 
                 // Duplicate check via RefNum
-                LocalTransaction existing = dao.getTransactionByRefNum(finalRefNum);
+                LocalTransaction existing = null;
+                if (finalRefNum != null) {
+                    existing = dao.getTransactionByRefNum(finalRefNum);
+                }
+                if (existing == null) {
+                    existing = dao.findDuplicateFuzzy(finalAmount, System.currentTimeMillis());
+                }
+
                 if (existing != null) {
-                    Log.d(TAG, "Duplicate transaction matching refNum: " + finalRefNum + ". Skipping.");
-                    AppLogger.log("Notif Parser: Duplicate skipped (Ref: " + finalRefNum + ")");
+                    Log.d(TAG, "Duplicate transaction detected. Skipping.");
+                    AppLogger.log("Notif Parser: Duplicate skipped (Amount: " + finalAmount + ")");
                     return;
                 }
 

@@ -148,13 +148,18 @@ public class SMSReceiver extends BroadcastReceiver {
                 TransactionDao dao = db.transactionDao();
 
                 // 14. Duplicate Detection (check if already saved by push notification listener)
+                LocalTransaction existing = null;
                 if (finalRefNum != null) {
-                    LocalTransaction existing = dao.getTransactionByRefNum(finalRefNum);
-                    if (existing != null) {
-                        Log.d(TAG, "Duplicate detected via RefNum: " + finalRefNum + ". Skipping.");
-                        AppLogger.log("SMS Parser: Duplicate skipped (Ref: " + finalRefNum + ")");
-                        return;
-                    }
+                    existing = dao.getTransactionByRefNum(finalRefNum);
+                }
+                if (existing == null) {
+                    existing = dao.findDuplicateFuzzy(finalAmount, System.currentTimeMillis());
+                }
+
+                if (existing != null) {
+                    Log.d(TAG, "Duplicate detected. Skipping.");
+                    AppLogger.log("SMS Parser: Duplicate skipped (Amount: " + finalAmount + ")");
+                    return;
                 }
 
                 LocalTransaction tx = new LocalTransaction();

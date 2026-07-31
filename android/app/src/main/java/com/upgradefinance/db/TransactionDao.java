@@ -18,6 +18,9 @@ public interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE referenceNumber = :refNum LIMIT 1")
     LocalTransaction getTransactionByRefNum(String refNum);
 
+    @Query("SELECT * FROM transactions WHERE amount = :amount AND ABS(timestamp - :timestamp) < 120000 LIMIT 1")
+    LocalTransaction findDuplicateFuzzy(double amount, long timestamp);
+
     @Query("SELECT * FROM transactions WHERE updatedAt > :timestamp")
     List<LocalTransaction> getChangesSince(long timestamp);
 

@@ -421,11 +421,17 @@ public class MainActivity extends AppCompatActivity {
                                         refNum = refMatcher.group(1);
                                     }
                                     
-                                    String finalRefNum = refNum != null ? refNum : "SMS_" + (smsDate / 1000) + "_" + (int)(amount);
-                                    
                                     // Duplicate check
-                                    LocalTransaction existing = dao.getTransactionByRefNum(finalRefNum);
+                                    LocalTransaction existing = null;
+                                    if (refNum != null) {
+                                        existing = dao.getTransactionByRefNum(refNum);
+                                    }
                                     if (existing == null) {
+                                        existing = dao.findDuplicateFuzzy(amount, smsDate);
+                                    }
+                                    
+                                    if (existing == null) {
+                                        String finalRefNum = refNum != null ? refNum : "SMS_" + (smsDate / 1000) + "_" + (int)(amount);
                                         // Save transaction
                                         LocalTransaction tx = new LocalTransaction();
                                         tx.id = UUID.randomUUID().toString();

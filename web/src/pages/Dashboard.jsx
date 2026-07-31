@@ -19,6 +19,7 @@ export default function Dashboard() {
   // Edit & Delete All States
   const [editingId, setEditingId] = useState(null);
   const [editMerchant, setEditMerchant] = useState('');
+  const [editCategory, setEditCategory] = useState('Other');
 
   // Bank Balances States
   const [startingBalances, setStartingBalances] = useState(() => {
@@ -84,6 +85,7 @@ export default function Dashboard() {
   const handleEditStart = (tx) => {
     setEditingId(tx.id);
     setEditMerchant(tx.merchant || '');
+    setEditCategory(tx.category || 'Other');
   };
 
   const handleEditSave = async (id) => {
@@ -91,7 +93,7 @@ export default function Dashboard() {
     const originalTx = transactions.find(t => t.id === id);
     if (!originalTx) return;
 
-    const updatedTx = { ...originalTx, merchant: editMerchant };
+    const updatedTx = { ...originalTx, merchant: editMerchant, category: editCategory };
     await dataService.updateTransaction(id, updatedTx);
     setEditingId(null);
     loadTransactions();
@@ -415,6 +417,15 @@ export default function Dashboard() {
                               onChange={(e) => setEditMerchant(e.target.value)}
                               className="text-xs px-2 py-0.5 rounded border border-indigo-400 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
                             />
+                            <select
+                              value={editCategory}
+                              onChange={(e) => setEditCategory(e.target.value)}
+                              className="text-[11px] px-1.5 py-0.5 rounded border border-indigo-400 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none font-medium"
+                            >
+                              {categories.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ))}
+                            </select>
                             <button
                               onClick={() => handleEditSave(tx.id)}
                               className="p-1 text-green-500 hover:text-green-600"
