@@ -74,7 +74,11 @@ export default function Dashboard() {
 
   const handleEditSave = async (id) => {
     if (!editMerchant.trim()) return;
-    await dataService.updateTransaction(id, { merchant: editMerchant });
+    const originalTx = transactions.find(t => t.id === id);
+    if (!originalTx) return;
+
+    const updatedTx = { ...originalTx, merchant: editMerchant };
+    await dataService.updateTransaction(id, updatedTx);
     setEditingId(null);
     loadTransactions();
   };

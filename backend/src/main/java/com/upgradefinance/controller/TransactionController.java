@@ -68,11 +68,21 @@ public class TransactionController {
         }
 
         Transaction tx = txOpt.get();
-        tx.setAmount(transactionDetails.getAmount());
-        tx.setCategory(transactionDetails.getCategory());
-        tx.setMerchant(transactionDetails.getMerchant());
-        tx.setBank(transactionDetails.getBank());
-        tx.setTransactionType(transactionDetails.getTransactionType());
+        if (transactionDetails.getAmount() > 0) {
+            tx.setAmount(transactionDetails.getAmount());
+        }
+        if (transactionDetails.getCategory() != null && !transactionDetails.getCategory().isEmpty()) {
+            tx.setCategory(transactionDetails.getCategory());
+        }
+        if (transactionDetails.getMerchant() != null && !transactionDetails.getMerchant().isEmpty()) {
+            tx.setMerchant(transactionDetails.getMerchant());
+        }
+        if (transactionDetails.getBank() != null && !transactionDetails.getBank().isEmpty()) {
+            tx.setBank(transactionDetails.getBank());
+        }
+        if (transactionDetails.getTransactionType() != null && !transactionDetails.getTransactionType().isEmpty()) {
+            tx.setTransactionType(transactionDetails.getTransactionType());
+        }
         tx.setUpdatedAt(System.currentTimeMillis());
         
         Transaction saved = transactionRepository.save(tx);
