@@ -19,6 +19,14 @@ export default function Dashboard() {
   // Edit & Delete All States
   const [editingId, setEditingId] = useState(null);
   const [editMerchant, setEditMerchant] = useState('');
+
+  // Bank Balances States
+  const [startingBalances, setStartingBalances] = useState(() => {
+    const saved = localStorage.getItem('starting_balances');
+    return saved ? JSON.parse(saved) : { 'Kotak Bank': 10000, 'SBI': 50000 };
+  });
+  const [editingBankName, setEditingBankName] = useState(null);
+  const [editBalanceVal, setEditBalanceVal] = useState('');
   
   useEffect(() => {
     loadTransactions();
@@ -87,6 +95,15 @@ export default function Dashboard() {
     setEditingId(null);
   };
 
+  const handleSaveBankBalance = (bankName) => {
+    const parsed = parseFloat(editBalanceVal);
+    if (isNaN(parsed)) return;
+    const updated = { ...startingBalances, [bankName]: parsed };
+    setStartingBalances(updated);
+    localStorage.setItem('starting_balances', JSON.stringify(updated));
+    setEditingBankName(null);
+  };
+
   // Metrics Calculations
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -115,6 +132,48 @@ export default function Dashboard() {
     if (filterType === 'CREDIT') return matchesSearch && t.transactionType === 'CREDIT';
     return matchesSearch;
   });
+
+  // Group and compute active bank accounts dynamically
+  const bankAccounts = React.useMemo(() => {
+    const accountsMap = {};
+
+    transactions.forEach(tx => {
+      let bankName = tx.bank || 'Unknown Bank';
+      if (bankName.toUpperCase().includes('KOTAK')) {
+        bankName = 'Kotak Bank';
+      }
+      
+      if (!accountsMap[bankName]) {
+        accountsMap[bankName] = {
+          name: bankName,
+          suffix: bankName === 'Kotak Bank' ? '7215' : 'XXXX',
+          netChange: 0,
+        };
+      }
+      
+      if (tx.transactionType === 'DEBIT') {
+        accountsMap[bankName].netChange -= tx.amount;
+      } else {
+        accountsMap[bankName].netChange += tx.amount;
+      }
+    });
+
+    if (!accountsMap['Kotak Bank']) {
+      accountsMap['Kotak Bank'] = {
+        name: 'Kotak Bank',
+        suffix: '7215',
+        netChange: 0,
+      };
+    }
+
+    return Object.values(accountsMap).map(acc => {
+      const starting = startingBalances[acc.name] !== undefined ? startingBalances[acc.name] : 10000;
+      return {
+        ...acc,
+        balance: starting + acc.netChange,
+      };
+    });
+  }, [transactions, startingBalances]);
 
   const categories = ['Food', 'Travel', 'Shopping', 'Fuel', 'Entertainment', 'Healthcare', 'Bills', 'Education', 'Savings', 'Other'];
 
@@ -394,36 +453,58 @@ export default function Dashboard() {
         <div className="space-y-6">
           <h2 className="text-2xl font-bold tracking-tight">My Accounts</h2>
           <div className="glass p-6 rounded-2xl shadow-sm space-y-4 border border-slate-100 dark:border-slate-900/50">
-            {/* Hardcoded bank account values or aggregate balances from transaction lists */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
-                  <CreditCard className="h-5 w-5" />
+            {bankAccounts.map((acc) => (
+              <div key={acc.name} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${acc.name.includes('Kotak') ? 'bg-red-500/10 text-red-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">{acc.name}</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Suffix *{acc.suffix}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-semibold text-sm">SBI Savings Account</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">Suffix *9081</div>
+                <div className="text-right">
+                  {editingBankName === acc.name ? (
+                    <div className="flex items-center space-x-1.5 mt-1">
+                      <input
+                        type="number"
+                        value={editBalanceVal}
+                        onChange={(e) => setEditBalanceVal(e.target.value)}
+                        className="w-20 text-xs px-1.5 py-0.5 rounded border border-slate-300 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                        placeholder="Start val"
+                      />
+                      <button
+                        onClick={() => handleSaveBankBalance(acc.name)}
+                        className="text-xs text-green-500 hover:text-green-600 font-bold"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => setEditingBankName(null)}
+                        className="text-xs text-slate-400 hover:text-slate-500"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-end space-x-1">
+                      <div className="font-bold text-sm">₹{acc.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                      <button
+                        onClick={() => {
+                          setEditingBankName(acc.name);
+                          setEditBalanceVal((startingBalances[acc.name] !== undefined ? startingBalances[acc.name] : 10000).toString());
+                        }}
+                        className="text-[10px] opacity-40 hover:opacity-100 transition-opacity"
+                        title="Set starting balance"
+                      >
+                        ✏️
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="text-right">
-                <div className="font-bold text-sm">₹84,520.00</div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400">
-                  <CreditCard className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="font-semibold text-sm">HDFC Bank Account</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">Suffix *0052</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-bold text-sm">₹12,410.00</div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
