@@ -23,10 +23,16 @@ export default function Dashboard() {
   // Bank Balances States
   const [startingBalances, setStartingBalances] = useState(() => {
     const saved = localStorage.getItem('starting_balances');
-    return saved ? JSON.parse(saved) : { 'Kotak Bank': 10000, 'SBI': 50000 };
+    return saved ? JSON.parse(saved) : { 'Kotak Bank': 10000 };
   });
   const [editingBankName, setEditingBankName] = useState(null);
   const [editBalanceVal, setEditBalanceVal] = useState('');
+
+  // Add Bank Form States
+  const [showAddBank, setShowAddBank] = useState(false);
+  const [newBankName, setNewBankName] = useState('');
+  const [newBankSuffix, setNewBankSuffix] = useState('');
+  const [newBankStart, setNewBankStart] = useState('');
   
   useEffect(() => {
     loadTransactions();
@@ -104,6 +110,38 @@ export default function Dashboard() {
     setEditingBankName(null);
   };
 
+  const handleAddBank = (e) => {
+    e.preventDefault();
+    if (!newBankName.trim() || isNaN(newBankStart) || !newBankStart.trim()) return;
+    
+    const bankKey = newBankName.trim();
+    const updated = { ...startingBalances, [bankKey]: parseFloat(newBankStart) };
+    setStartingBalances(updated);
+    localStorage.setItem('starting_balances', JSON.stringify(updated));
+    
+    const suffixes = JSON.parse(localStorage.getItem('bank_suffixes') || '{}');
+    suffixes[bankKey] = newBankSuffix.trim() || 'XXXX';
+    localStorage.setItem('bank_suffixes', JSON.stringify(suffixes));
+    
+    setNewBankName('');
+    setNewBankSuffix('');
+    setNewBankStart('');
+    setShowAddBank(false);
+  };
+
+  const handleDeleteBank = (bankName) => {
+    if (window.confirm(`Are you sure you want to remove ${bankName} from your accounts list?`)) {
+      const updated = { ...startingBalances };
+      delete updated[bankName];
+      setStartingBalances(updated);
+      localStorage.setItem('starting_balances', JSON.stringify(updated));
+      
+      const suffixes = JSON.parse(localStorage.getItem('bank_suffixes') || '{}');
+      delete suffixes[bankName];
+      localStorage.setItem('bank_suffixes', JSON.stringify(suffixes));
+    }
+  };
+
   // Metrics Calculations
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -135,44 +173,29 @@ export default function Dashboard() {
 
   // Group and compute active bank accounts dynamically
   const bankAccounts = React.useMemo(() => {
-    const accountsMap = {};
+    const accountsList = [];
+    const suffixes = JSON.parse(localStorage.getItem('bank_suffixes') || '{}');
 
-    transactions.forEach(tx => {
-      let bankName = tx.bank || 'Unknown Bank';
-      if (bankName.toUpperCase().includes('KOTAK')) {
-        bankName = 'Kotak Bank';
-      }
-      
-      if (!accountsMap[bankName]) {
-        accountsMap[bankName] = {
-          name: bankName,
-          suffix: bankName === 'Kotak Bank' ? '7215' : 'XXXX',
-          netChange: 0,
-        };
-      }
-      
-      if (tx.transactionType === 'DEBIT') {
-        accountsMap[bankName].netChange -= tx.amount;
-      } else {
-        accountsMap[bankName].netChange += tx.amount;
-      }
+    Object.keys(startingBalances).forEach(bankName => {
+      const netChange = transactions
+        .filter(tx => {
+          const txBank = tx.bank || 'Unknown Bank';
+          if (bankName === 'Kotak Bank' && txBank.toUpperCase().includes('KOTAK')) return true;
+          return txBank.toUpperCase() === bankName.toUpperCase();
+        })
+        .reduce((sum, tx) => {
+          return sum + (tx.transactionType === 'DEBIT' ? -tx.amount : tx.amount);
+        }, 0);
+
+      const suffix = suffixes[bankName] || (bankName === 'Kotak Bank' ? '7215' : 'XXXX');
+      accountsList.push({
+        name: bankName,
+        suffix: suffix,
+        balance: startingBalances[bankName] + netChange,
+      });
     });
 
-    if (!accountsMap['Kotak Bank']) {
-      accountsMap['Kotak Bank'] = {
-        name: 'Kotak Bank',
-        suffix: '7215',
-        netChange: 0,
-      };
-    }
-
-    return Object.values(accountsMap).map(acc => {
-      const starting = startingBalances[acc.name] !== undefined ? startingBalances[acc.name] : 10000;
-      return {
-        ...acc,
-        balance: starting + acc.netChange,
-      };
-    });
+    return accountsList;
   }, [transactions, startingBalances]);
 
   const categories = ['Food', 'Travel', 'Shopping', 'Fuel', 'Entertainment', 'Healthcare', 'Bills', 'Education', 'Savings', 'Other'];
@@ -500,11 +523,71 @@ export default function Dashboard() {
                       >
                         ✏️
                       </button>
+                      <button
+                        onClick={() => handleDeleteBank(acc.name)}
+                        className="text-[10px] text-red-400 hover:text-red-600 ml-1.5 font-bold"
+                        title="Remove bank account"
+                      >
+                        ✕
+                      </button>
                     </div>
                   )}
                 </div>
               </div>
             ))}
+            
+            {/* Add Bank Account trigger */}
+            {!showAddBank ? (
+              <button
+                onClick={() => setShowAddBank(true)}
+                className="w-full py-2 border border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 text-xs text-slate-500 hover:text-indigo-500 rounded-xl transition-colors font-medium"
+              >
+                + Add Bank Account
+              </button>
+            ) : (
+              <form onSubmit={handleAddBank} className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800/50 space-y-2">
+                <input
+                  type="text"
+                  placeholder="Bank Name (e.g. SBI)"
+                  value={newBankName}
+                  onChange={(e) => setNewBankName(e.target.value)}
+                  className="w-full text-xs px-2 py-1 rounded border border-slate-200 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                  required
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Suffix (e.g. 9081)"
+                    value={newBankSuffix}
+                    onChange={(e) => setNewBankSuffix(e.target.value)}
+                    className="w-1/2 text-xs px-2 py-1 rounded border border-slate-200 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Starting Bal"
+                    value={newBankStart}
+                    onChange={(e) => setNewBankStart(e.target.value)}
+                    className="w-1/2 text-xs px-2 py-1 rounded border border-slate-200 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end space-x-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddBank(false)}
+                    className="px-2 py-1 text-xs text-slate-500 hover:text-slate-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-2 py-1 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600 font-semibold"
+                  >
+                    Add
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </div>
