@@ -21,6 +21,9 @@ public interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE updatedAt > :timestamp")
     List<LocalTransaction> getChangesSince(long timestamp);
 
+    @Query("SELECT COUNT(*) FROM transactions WHERE isDeleted = 0")
+    int getActiveCount();
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertOrReplace(LocalTransaction transaction);
 

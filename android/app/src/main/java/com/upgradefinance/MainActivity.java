@@ -299,7 +299,7 @@ public class MainActivity extends AppCompatActivity {
 
         executor.execute(() -> {
             try {
-                int count = AppDatabase.getDatabase(MainActivity.this).transactionDao().getChangesSince(0).size();
+                int count = AppDatabase.getDatabase(MainActivity.this).transactionDao().getActiveCount();
                 new Handler(Looper.getMainLooper()).post(() -> tvTxCount.setText("Transactions Cached: " + count));
             } catch (Exception e) {
                 e.printStackTrace();
