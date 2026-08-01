@@ -221,6 +221,7 @@ export const dataService = {
       } catch (e) {
         console.log('Deleted budget locally.');
       }
+    }
   },
 
   getBankAccounts: async () => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { dataService, isLocalMode } from '../utils/api';
+import { dataService, isLocalMode, syncWithServer } from '../utils/api';
 import { Plus, Search, Calendar, Landmark, CreditCard, ChevronDown, Check, TrendingDown, TrendingUp, Sparkles, Filter } from 'lucide-react';
 
 export default function Dashboard() {
@@ -51,12 +51,101 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch transactions
+      // 0. Migrate old local storage keys if present
+      const oldStarting = localStorage.getItem('starting_balances');
+      if (oldStarting) {
+        try {
+          const parsed = JSON.parse(oldStarting);
+          const localAccs = JSON.parse(localStorage.getItem('local_bank_accounts') || '[]');
+          let changed = false;
+          Object.keys(parsed).forEach(bankName => {
+            const hasAcc = localAccs.some(a => a.bankName === bankName);
+            if (!hasAcc) {
+              localAccs.push({
+                id: 'migrated-bank-' + Math.random().toString(36).substr(2, 9),
+                bankName,
+                balance: parsed[bankName],
+                accountSuffix: bankName === 'Kotak Bank' ? '7215' : 'XXXX',
+                updatedAt: Date.now(),
+                isDeleted: false
+              });
+              changed = true;
+            }
+          });
+          if (changed) {
+            localStorage.setItem('local_bank_accounts', JSON.stringify(localAccs));
+          }
+          localStorage.removeItem('starting_balances');
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      const oldBudget = localStorage.getItem('monthly_budget');
+      if (oldBudget) {
+        try {
+          const parsed = parseFloat(oldBudget);
+          if (!isNaN(parsed)) {
+            const localBudgets = JSON.parse(localStorage.getItem('local_budgets') || '[]');
+            const hasTotal = localBudgets.some(b => b.category === 'TOTAL');
+            if (!hasTotal) {
+              localBudgets.push({
+                id: 'migrated-budget-' + Math.random().toString(36).substr(2, 9),
+                category: 'TOTAL',
+                limitAmount: parsed,
+                period: 'MONTHLY',
+                updatedAt: Date.now(),
+                isDeleted: false
+              });
+              localStorage.setItem('local_budgets', JSON.stringify(localBudgets));
+            }
+          }
+          localStorage.removeItem('monthly_budget');
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      const oldCatBudgets = localStorage.getItem('category_budgets');
+      if (oldCatBudgets) {
+        try {
+          const parsed = JSON.parse(oldCatBudgets);
+          const localBudgets = JSON.parse(localStorage.getItem('local_budgets') || '[]');
+          let changed = false;
+          Object.keys(parsed).forEach(cat => {
+            const hasB = localBudgets.some(b => b.category === cat);
+            if (!hasB) {
+              localBudgets.push({
+                id: 'migrated-cat-budget-' + Math.random().toString(36).substr(2, 9),
+                category: cat,
+                limitAmount: parsed[cat],
+                period: 'MONTHLY',
+                updatedAt: Date.now(),
+                isDeleted: false
+              });
+              changed = true;
+            }
+          });
+          if (changed) {
+            localStorage.setItem('local_budgets', JSON.stringify(localBudgets));
+          }
+          localStorage.removeItem('category_budgets');
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // 1. Sync with server first if logged in (pushed offline edits, pulls server states)
+      if (!isLocalMode()) {
+        await syncWithServer();
+      }
+
+      // 2. Fetch transactions
       const txData = await dataService.getTransactions();
       txData.sort((a, b) => b.timestamp - a.timestamp);
       setTransactions(txData);
 
-      // 2. Fetch budgets
+      // 3. Fetch budgets
       const budgetsData = await dataService.getBudgets();
       setDbBudgets(budgetsData);
       
@@ -75,7 +164,7 @@ export default function Dashboard() {
       });
       setCategoryBudgets(catBudgetsObj);
 
-      // 3. Fetch bank accounts
+      // 4. Fetch bank accounts
       const accountsData = await dataService.getBankAccounts();
       setDbBankAccounts(accountsData);
       
