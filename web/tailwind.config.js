@@ -9,16 +9,16 @@ export default {
     extend: {
       colors: {
         background: {
-          light: '#f5f5f7',
-          dark: '#0f0f12',
+          light: 'var(--theme-bg)',
+          dark: 'var(--theme-bg)',
         },
         card: {
-          light: 'rgba(255, 255, 255, 0.7)',
-          dark: 'rgba(20, 20, 25, 0.6)',
+          light: 'var(--theme-glass-bg)',
+          dark: 'var(--theme-glass-bg)',
         },
         primary: {
-          DEFAULT: '#6366f1',
-          hover: '#4f46e5',
+          DEFAULT: 'var(--theme-primary)',
+          hover: 'var(--theme-primary-hover)',
         },
         accent: {
           green: '#10b981',

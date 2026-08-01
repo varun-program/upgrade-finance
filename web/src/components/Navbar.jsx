@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Sun, Moon, RefreshCw, LogOut, Wallet, BarChart3, Receipt, PiggyBank, ShieldAlert, Cpu, Sparkles } from 'lucide-react';
 import { syncWithServer, isLocalMode } from '../utils/api';
 
-export default function Navbar({ isAuthenticated, onLogout, darkMode, setDarkMode }) {
+export default function Navbar({ isAuthenticated, onLogout, darkMode, setDarkMode, themePreset, setThemePreset }) {
   const location = useLocation();
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
@@ -80,6 +80,32 @@ export default function Navbar({ isAuthenticated, onLogout, darkMode, setDarkMod
               >
                 <RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
               </button>
+            )}
+
+            {darkMode && (
+              <div className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 transition-all duration-300">
+                <button
+                  onClick={() => setThemePreset('obsidian')}
+                  className={`h-3 w-3 rounded-full bg-indigo-500 transition-all duration-300 ${
+                    themePreset === 'obsidian' ? 'ring-2 ring-indigo-300 scale-125' : 'opacity-40 hover:opacity-100'
+                  }`}
+                  title="Obsidian Theme"
+                />
+                <button
+                  onClick={() => setThemePreset('emerald')}
+                  className={`h-3 w-3 rounded-full bg-emerald-500 transition-all duration-300 ${
+                    themePreset === 'emerald' ? 'ring-2 ring-emerald-300 scale-125' : 'opacity-40 hover:opacity-100'
+                  }`}
+                  title="Emerald Theme"
+                />
+                <button
+                  onClick={() => setThemePreset('cyberpunk')}
+                  className={`h-3 w-3 rounded-full bg-fuchsia-500 transition-all duration-300 ${
+                    themePreset === 'cyberpunk' ? 'ring-2 ring-fuchsia-300 scale-125' : 'opacity-40 hover:opacity-100'
+                  }`}
+                  title="Cyberpunk Theme"
+                />
+              </div>
             )}
 
             <button

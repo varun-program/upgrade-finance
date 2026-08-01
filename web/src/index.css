@@ -3,27 +3,73 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --theme-bg: #f5f5f7;
+    --theme-text: #1e293b;
+    --theme-primary: #6366f1;
+    --theme-primary-hover: #4f46e5;
+    --theme-glass-bg: rgba(255, 255, 255, 0.7);
+    --theme-glass-border: rgba(99, 102, 241, 0.12);
+    --theme-accent: #6366f1;
+  }
+
+  /* Default Dark / Obsidian Theme */
+  .dark, .dark.theme-obsidian {
+    --theme-bg: #0b0b0e;
+    --theme-text: #f8fafc;
+    --theme-primary: #6366f1;
+    --theme-primary-hover: #4f46e5;
+    --theme-glass-bg: rgba(13, 13, 17, 0.6);
+    --theme-glass-border: rgba(255, 255, 255, 0.08);
+    --theme-accent: #6366f1;
+  }
+
+  /* Emerald Glass Theme */
+  .dark.theme-emerald {
+    --theme-bg: #040d0a;
+    --theme-text: #e6fcf5;
+    --theme-primary: #10b981;
+    --theme-primary-hover: #059669;
+    --theme-glass-bg: rgba(6, 20, 16, 0.6);
+    --theme-glass-border: rgba(16, 185, 129, 0.15);
+    --theme-accent: #10b981;
+  }
+
+  /* Indigo Cyberpunk Theme */
+  .dark.theme-cyberpunk {
+    --theme-bg: #07030e;
+    --theme-text: #fdfafd;
+    --theme-primary: #d946ef;
+    --theme-primary-hover: #c084fc;
+    --theme-glass-bg: rgba(15, 7, 26, 0.6);
+    --theme-glass-border: rgba(217, 70, 239, 0.18);
+    --theme-accent: #d946ef;
+  }
+
   body {
-    @apply bg-background-light text-slate-800 transition-colors duration-300 font-sans antialiased;
-  }
-  body.dark {
-    @apply bg-background-dark text-slate-100;
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
+    transition: background-color 0.3s, color 0.3s;
+    font-family: 'Outfit', 'Inter', sans-serif;
+    @apply antialiased;
   }
 }
 
-/* Glassmorphism utility */
+/* Glassmorphism utility using CSS variables */
 .glass {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--theme-glass-bg);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid var(--theme-glass-border);
 }
 
-.dark .glass {
-  background: rgba(20, 20, 25, 0.6);
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Custom glow effects for each theme */
+.theme-cyberpunk .glass {
+  box-shadow: 0 4px 30px rgba(217, 70, 239, 0.03);
+}
+
+.theme-emerald .glass {
+  box-shadow: 0 4px 30px rgba(16, 185, 129, 0.03);
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
