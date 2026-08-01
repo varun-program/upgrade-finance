@@ -22,10 +22,7 @@ export default function Dashboard() {
   const [editCategory, setEditCategory] = useState('Other');
 
   // Bank Balances States
-  const [startingBalances, setStartingBalances] = useState(() => {
-    const saved = localStorage.getItem('starting_balances');
-    return saved ? JSON.parse(saved) : { 'Kotak Bank': 10000 };
-  });
+  const [startingBalances, setStartingBalances] = useState({ 'Kotak Bank': 10000 });
   const [editingBankName, setEditingBankName] = useState(null);
   const [editBalanceVal, setEditBalanceVal] = useState('');
 
@@ -36,31 +33,69 @@ export default function Dashboard() {
   const [newBankStart, setNewBankStart] = useState('');
 
   // Budget States
-  const [monthlyBudget, setMonthlyBudget] = useState(() => {
-    const saved = localStorage.getItem('monthly_budget');
-    return saved ? parseFloat(saved) : 30000;
-  });
-  const [categoryBudgets, setCategoryBudgets] = useState(() => {
-    const saved = localStorage.getItem('category_budgets');
-    return saved ? JSON.parse(saved) : { 'Food': 10000, 'Shopping': 10000, 'Travel': 5000 };
-  });
+  const [monthlyBudget, setMonthlyBudget] = useState(30000);
+  const [categoryBudgets, setCategoryBudgets] = useState({ 'Food': 10000, 'Shopping': 10000, 'Travel': 5000 });
   const [editingBudget, setEditingBudget] = useState(false);
   const [tempBudgetVal, setTempBudgetVal] = useState('');
   const [editingCatBudget, setEditingCatBudget] = useState(null);
   const [tempCatBudgetVal, setTempCatBudgetVal] = useState('');
+
+  // Server synced lists for references
+  const [dbBudgets, setDbBudgets] = useState([]);
+  const [dbBankAccounts, setDbBankAccounts] = useState([]);
   
   useEffect(() => {
-    loadTransactions();
+    loadDashboardData();
   }, []);
 
-  const loadTransactions = async () => {
+  const loadDashboardData = async () => {
     setLoading(true);
-    const data = await dataService.getTransactions();
-    // Sort transactions by timestamp desc
-    data.sort((a, b) => b.timestamp - a.timestamp);
-    setTransactions(data);
+    try {
+      // 1. Fetch transactions
+      const txData = await dataService.getTransactions();
+      txData.sort((a, b) => b.timestamp - a.timestamp);
+      setTransactions(txData);
+
+      // 2. Fetch budgets
+      const budgetsData = await dataService.getBudgets();
+      setDbBudgets(budgetsData);
+      
+      const totalBudgetObj = budgetsData.find(b => b.category === 'TOTAL');
+      if (totalBudgetObj) {
+        setMonthlyBudget(totalBudgetObj.limitAmount);
+      } else {
+        setMonthlyBudget(30000);
+      }
+      
+      const catBudgetsObj = {};
+      budgetsData.forEach(b => {
+        if (b.category !== 'TOTAL') {
+          catBudgetsObj[b.category] = b.limitAmount;
+        }
+      });
+      setCategoryBudgets(catBudgetsObj);
+
+      // 3. Fetch bank accounts
+      const accountsData = await dataService.getBankAccounts();
+      setDbBankAccounts(accountsData);
+      
+      const startBalObj = {};
+      accountsData.forEach(acc => {
+        startBalObj[acc.bankName] = acc.balance;
+      });
+      
+      // Ensure Kotak Bank exists by default if none defined
+      if (!startBalObj['Kotak Bank']) {
+        startBalObj['Kotak Bank'] = 10000;
+      }
+      setStartingBalances(startBalObj);
+    } catch (e) {
+      console.error("Error loading dashboard data", e);
+    }
     setLoading(false);
   };
+
+  const loadTransactions = loadDashboardData;
 
   const handleAddTransaction = async (e) => {
     e.preventDefault();
@@ -117,63 +152,115 @@ export default function Dashboard() {
     setEditingId(null);
   };
 
-  const handleSaveBankBalance = (bankName) => {
+  const handleSaveBankBalance = async (bankName) => {
     const parsed = parseFloat(editBalanceVal);
     if (isNaN(parsed)) return;
-    const updated = { ...startingBalances, [bankName]: parsed };
-    setStartingBalances(updated);
-    localStorage.setItem('starting_balances', JSON.stringify(updated));
+    
+    const existing = dbBankAccounts.find(acc => acc.bankName === bankName);
+    const accObj = {
+      ...(existing || {}),
+      bankName: bankName,
+      balance: parsed,
+      accountSuffix: bankName === 'Kotak Bank' ? '7215' : (existing ? existing.accountSuffix : 'XXXX')
+    };
+    
+    await dataService.saveBankAccount(accObj);
     setEditingBankName(null);
+    loadDashboardData();
   };
 
-  const handleAddBank = (e) => {
+  const handleAddBank = async (e) => {
     e.preventDefault();
     if (!newBankName.trim() || isNaN(newBankStart) || !newBankStart.trim()) return;
     
     const bankKey = newBankName.trim();
-    const updated = { ...startingBalances, [bankKey]: parseFloat(newBankStart) };
-    setStartingBalances(updated);
-    localStorage.setItem('starting_balances', JSON.stringify(updated));
+    const startVal = parseFloat(newBankStart);
     
-    const suffixes = JSON.parse(localStorage.getItem('bank_suffixes') || '{}');
-    suffixes[bankKey] = newBankSuffix.trim() || 'XXXX';
-    localStorage.setItem('bank_suffixes', JSON.stringify(suffixes));
+    const accObj = {
+      bankName: bankKey,
+      balance: startVal,
+      accountSuffix: newBankSuffix.trim() || 'XXXX'
+    };
+    
+    await dataService.saveBankAccount(accObj);
     
     setNewBankName('');
     setNewBankSuffix('');
     setNewBankStart('');
     setShowAddBank(false);
+    loadDashboardData();
   };
 
-  const handleDeleteBank = (bankName) => {
+  const handleDeleteBank = async (bankName) => {
     if (window.confirm(`Are you sure you want to remove ${bankName} from your accounts list?`)) {
-      const updated = { ...startingBalances };
-      delete updated[bankName];
-      setStartingBalances(updated);
-      localStorage.setItem('starting_balances', JSON.stringify(updated));
-      
-      const suffixes = JSON.parse(localStorage.getItem('bank_suffixes') || '{}');
-      delete suffixes[bankName];
-      localStorage.setItem('bank_suffixes', JSON.stringify(suffixes));
+      const existing = dbBankAccounts.find(acc => acc.bankName === bankName);
+      if (existing) {
+        await dataService.deleteBankAccount(existing.id);
+      }
+      loadDashboardData();
     }
   };
 
-  const handleSaveBudget = (e) => {
+  const handleSaveBudget = async (e) => {
     e.preventDefault();
     const parsed = parseFloat(tempBudgetVal);
     if (isNaN(parsed) || parsed <= 0) return;
+    
+    const existing = dbBudgets.find(b => b.category === 'TOTAL');
+    const budgetObj = {
+      ...(existing || {}),
+      category: 'TOTAL',
+      limitAmount: parsed,
+      period: 'MONTHLY'
+    };
+    
+    await dataService.saveBudget(budgetObj);
     setMonthlyBudget(parsed);
-    localStorage.setItem('monthly_budget', parsed.toString());
     setEditingBudget(false);
+    loadDashboardData();
   };
 
-  const handleSaveCatBudget = (catName) => {
+  const handleSaveCatBudget = async (catName) => {
     const parsed = parseFloat(tempCatBudgetVal);
     if (isNaN(parsed)) return;
-    const updated = { ...categoryBudgets, [catName]: parsed };
-    setCategoryBudgets(updated);
-    localStorage.setItem('category_budgets', JSON.stringify(updated));
+    
+    const existing = dbBudgets.find(b => b.category === catName);
+    const budgetObj = {
+      ...(existing || {}),
+      category: catName,
+      limitAmount: parsed,
+      period: 'MONTHLY'
+    };
+    
+    await dataService.saveBudget(budgetObj);
     setEditingCatBudget(null);
+    loadDashboardData();
+  };
+
+  const handleExportCSV = () => {
+    if (transactions.length === 0) return;
+    
+    const headers = ['Date', 'Merchant', 'Category', 'Bank', 'Type', 'Amount', 'Reference Number'];
+    const rows = transactions.map(tx => [
+      new Date(tx.timestamp).toLocaleDateString(),
+      tx.merchant || 'Unknown Merchant',
+      tx.category || 'Other',
+      tx.bank || 'Unknown Bank',
+      tx.transactionType,
+      tx.amount,
+      tx.referenceNumber || ''
+    ]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(e => e.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))].join('\n');
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `upgrade_finance_export_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Metrics Calculations
@@ -208,7 +295,6 @@ export default function Dashboard() {
   // Group and compute active bank accounts dynamically
   const bankAccounts = React.useMemo(() => {
     const accountsList = [];
-    const suffixes = JSON.parse(localStorage.getItem('bank_suffixes') || '{}');
 
     Object.keys(startingBalances).forEach(bankName => {
       const netChange = transactions
@@ -221,7 +307,9 @@ export default function Dashboard() {
           return sum + (tx.transactionType === 'DEBIT' ? -tx.amount : tx.amount);
         }, 0);
 
-      const suffix = suffixes[bankName] || (bankName === 'Kotak Bank' ? '7215' : 'XXXX');
+      const dbAccObj = dbBankAccounts.find(a => a.bankName === bankName);
+      const suffix = dbAccObj ? dbAccObj.accountSuffix : (bankName === 'Kotak Bank' ? '7215' : 'XXXX');
+      
       accountsList.push({
         name: bankName,
         suffix: suffix,
@@ -230,9 +318,9 @@ export default function Dashboard() {
     });
 
     return accountsList;
-  }, [transactions, startingBalances]);
+  }, [transactions, startingBalances, dbBankAccounts]);
 
-  const categories = ['Food', 'Travel', 'Shopping', 'Fuel', 'Entertainment', 'Healthcare', 'Bills', 'Education', 'Savings', 'Other'];
+  const categories = ['Food', 'Travel', 'Shopping', 'Grocery', 'Rent', 'Movie', 'Fuel', 'Entertainment', 'Healthcare', 'Bills', 'Education', 'Savings', 'Other'];
 
   const currentMonthCategorySpends = React.useMemo(() => {
     const spends = {};
@@ -552,12 +640,20 @@ export default function Dashboard() {
             <div className="flex items-center space-x-4">
               <h2 className="text-2xl font-bold tracking-tight">Transactions Log</h2>
               {transactions.length > 0 && (
-                <button
-                  onClick={handleDeleteAll}
-                  className="text-xs px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 font-semibold transition-colors"
-                >
-                  Delete All
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handleDeleteAll}
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 font-semibold transition-colors"
+                  >
+                    Delete All
+                  </button>
+                  <button
+                    onClick={handleExportCSV}
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 font-semibold transition-colors animate-fade-in"
+                  >
+                    Export CSV
+                  </button>
+                </div>
               )}
             </div>
             <div className="flex items-center space-x-2 w-full sm:w-auto">

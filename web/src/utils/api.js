@@ -221,6 +221,57 @@ export const dataService = {
       } catch (e) {
         console.log('Deleted budget locally.');
       }
+  },
+
+  getBankAccounts: async () => {
+    if (isLocalMode()) {
+      return getLocalData('local_bank_accounts').filter(b => !b.isDeleted);
+    }
+    try {
+      const res = await api.get('/bank-accounts');
+      return res.data;
+    } catch (e) {
+      return getLocalData('local_bank_accounts').filter(b => !b.isDeleted);
+    }
+  },
+
+  saveBankAccount: async (account) => {
+    const enriched = {
+      ...account,
+      id: account.id || Math.random().toString(36).substr(2, 9),
+      updatedAt: Date.now(),
+      isDeleted: false,
+    };
+    const local = getLocalData('local_bank_accounts');
+    const idx = local.findIndex(b => b.id === enriched.id);
+    if (idx >= 0) local[idx] = enriched;
+    else local.push(enriched);
+    saveLocalData('local_bank_accounts', local);
+
+    if (!isLocalMode()) {
+      try {
+        await api.post('/bank-accounts', enriched);
+      } catch (e) {
+        console.log('Saved bank account locally.');
+      }
+    }
+    return enriched;
+  },
+
+  deleteBankAccount: async (id) => {
+    const local = getLocalData('local_bank_accounts');
+    const idx = local.findIndex(b => b.id === id);
+    if (idx >= 0) {
+      local[idx].isDeleted = true;
+      local[idx].updatedAt = Date.now();
+      saveLocalData('local_bank_accounts', local);
+    }
+    if (!isLocalMode()) {
+      try {
+        await api.delete(`/bank-accounts/${id}`);
+      } catch (e) {
+        console.log('Deleted bank account locally.');
+      }
     }
   },
 
