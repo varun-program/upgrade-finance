@@ -25,6 +25,21 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_email');
+      localStorage.removeItem('last_sync_timestamp');
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Helper for local database simulation
 const getLocalData = (key) => {
   const data = localStorage.getItem(key);

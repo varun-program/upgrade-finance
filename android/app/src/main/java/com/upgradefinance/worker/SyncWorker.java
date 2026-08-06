@@ -94,6 +94,16 @@ public class SyncWorker extends Worker {
                 Log.d(TAG, "Sync successfully completed at " + newSyncTime);
                 AppLogger.log("Sync: Success! Downloaded cloud updates.");
                 return Result.success();
+            } else if (code == 401 || code == 403) {
+                Log.e(TAG, "Auth expired or forbidden. Clearing local credentials.");
+                prefs.edit()
+                        .remove("auth_token")
+                        .remove("auth_email")
+                        .remove("auth_server")
+                        .remove("last_sync_timestamp")
+                        .apply();
+                AppLogger.log("Sync Error: Session expired. Please log in again.");
+                return Result.failure();
             } else {
                 Log.e(TAG, "Server returned sync error code: " + code);
                 AppLogger.log("Sync: Failed (HTTP " + code + ")");
